@@ -1,202 +1,193 @@
-# GOAL — Consciousness
+# GOAL — Consciousness / BrainOS
 
-> Sustrato neuronal biológico reconstruido (conectoma real de *Drosophila*) + **Laya** como "córtex prefrontal" determinista, para medir hasta dónde llegan la reacción, la decisión, el aprendizaje y los marcadores asociados a la conciencia, y **ver** cómo computan juntos.
+> Un **sistema operativo real** cuyo "usuario" es un **cerebro biológico reconstruido** (conectoma de *Drosophila* ejecutado como red spiking), con **Laya** como córtex prefrontal determinista y **RWKV-7** como voz que aprende sobre la marcha. Vive dentro de un **sandbox (neko)** donde ve la pantalla, mueve el ratón, teclea y te escribe notas: primero en **modo fantasma** y después, cuando demuestra que sabe lo que hace y tú lo autorizas, **de forma autónoma**. Todo medido, reproducible y visible en 3D.
 
-Fecha de redacción: 2026-09-26 · Estado: **definición (fase 0 sin empezar)**
+Última revisión: 2026-09-27 · Rama: `claude/bold-dirac-s0e3t4`
+Estado: fase 0 ✅ (Shiu reproducido en CPU); datos, pesos y código descargados en el repo.
 
 ---
 
-## 1. Qué es y qué no es
+## 1. Qué queremos de verdad
 
-**Es:** un experimento reproducible donde:
-1. un conectoma de microscopía electrónica real se ejecuta como red de neuronas *spiking*;
-2. recibe estímulos, reacciona y es sometido a tests;
-3. se acopla a Laya, que primero **escucha** su estado y después **actúa** sobre él por un canal pequeño y controlado;
-4. todo se mide contra controles (Laya apagada, conectoma barajado) y se visualiza en 3D.
+1. **Simular computación neuronal con base biológica fiel:** conectoma EM real → spikes → comportamiento. Nada inventado sin marcarlo.
+2. **Medir marcadores asociados a la conciencia** (integración, recurrencia, persistencia, complejidad perturbacional, legibilidad del estado), con controles. **No** afirmamos crear conciencia; construimos el sustrato para poner hipótesis a prueba.
+3. **Simbiosis cerebro ⇄ Laya:** Laya escucha el cerebro y luego actúa sobre él por un canal limitado, como un córtex prefrontal.
+4. **BrainOS:** un S.O. real (arrancable en nube, VM y USB) con todo el userland en **Rust**, salvo el cerebro.
+5. **Cuerpo digital:** el cerebro vive en un escritorio sandbox (neko). Ve, mueve el ratón, teclea y escribe notas.
+6. **Autonomía por escalera:** fantasma → validado → autónomo, con métrica **y** tu permiso.
+7. **Aprender sobre la marcha** con un sistema de entrenamiento innovador y barato (sin GPU): **MEM-EGGROLL** (§8).
 
-**No es:**
-- una mosca virtual completa (no se simula el cuerpo en la v1);
-- un "animal nuevo" (no se fusionan conectomas de individuos distintos);
-- una afirmación de que "hemos creado conciencia". Ninguna métrica actual (PCI, Φ, broadcast…) es una prueba aceptada de conciencia. El adversarial collaboration IIT vs GNWT (Nature, 2025) confirmó y cuestionó predicciones de ambas teorías. Aquí se miden **marcadores**, no se certifica conciencia.
+## 2. Principios (no negociables)
 
-## 2. Pregunta central
+1. **Dato ≠ hipótesis.** Todo parámetro lleva `source: measured | published_model | hypothesis`.
+2. **Conectoma inmutable.** El aprendizaje vive en capas separadas (estado plástico, adaptadores low-rank, memoria), que se pueden resetear.
+3. **Todo se puede apagar** (Laya, RWKV, memoria, plasticidad): cada ablación es un experimento.
+4. **Controles obligatorios:** conectoma barajado (preservando grados), Laya apagada y azar. Si el conectoma barajado rinde igual, no se atribuye a la biología.
+5. **Determinismo:** semillas, versiones fijadas, hash de conectoma + parámetros + estado. Misma entrada ⇒ misma trayectoria.
+6. **Seguridad del sandbox:** el cerebro **solo** actúa dentro de neko, nunca sobre el host. Siempre hay un botón de "volver a fantasma" y otro de "matar".
+7. **Honestidad:** se reporta lo que falla igual que lo que funciona.
 
-> ¿Qué propiedades de percepción, decisión, memoria y estado global aparecen en un conectoma real ejecutado como red spiking y **qué cambia** cuando se acopla a una capa de decisión determinista (Laya), frente a (a) el cerebro solo y (b) un conectoma barajado con la misma distribución de grados?
-
-Si un resultado se reproduce igual con el conectoma barajado, **no se atribuye a la biología**.
-
-## 3. Principios (no negociables)
-
-1. **Dato ≠ hipótesis.** Cada parámetro lleva `source: measured | published_model | hypothesis`. Lo no medido no se rellena con una "mejor suposición" sin marcarlo.
-2. **Conectoma inmutable.** La anatomía (quién conecta con quién, cuántas sinapsis, neurotransmisor) es de solo lectura. El aprendizaje vive en una **capa de estado plástico separada** (pesos dinámicos, trazas, ganancias), que se puede resetear al estado 0.
-3. **Sinapsis con incertidumbre.** Las sinapsis son predicciones automáticas (en BANC: F1 ≈ 0,83). Se guardan con confianza y se aceptan "no revisadas a mano", pero nunca como verdad absoluta.
-4. **Todo se puede apagar.** Laya, la plasticidad, cada módulo: ablación = experimento.
-5. **Controles obligatorios.** Todo resultado se compara con: conectoma barajado (preservando grados), Laya apagada y azar.
-6. **Determinismo.** Semillas fijas, versiones fijadas y hash de conectoma + parámetros + estado en cada ejecución. Misma entrada ⇒ misma trayectoria.
-
-## 4. Arquitectura
+## 3. Arquitectura
 
 ```
-                 ┌──────────────── TESTS / ESTÍMULOS ────────────────┐
-                 │ sabor · tacto · visión simple · tareas lógicas    │
-                 └──────────────────────┬────────────────────────────┘
-                                        ▼
-   ┌──────────────────────── SUSTRATO (inmutable) ───────────────────────┐
-   │ Conectoma: FlyWire v783 → MaleCNS v1.0 → BANC (validación cruzada)  │
-   │ neuronas · pares sinápticos · neurotransmisor · confianza · tipo    │
-   └──────────────────────┬──────────────────────────────────────────────┘
-                          ▼
-   ┌──────────── MOTOR NEURONAL ────────────┐   ┌── ESTADO PLÁSTICO ──┐
-   │ LIF (Shiu et al.) en toda la red        │◄─►│ ganancias · trazas  │
-   │ + modelos más ricos solo donde haya     │   │ regla de plasticidad│
-   │   datos (fase posterior)                │   │ (evolucionada)      │
-   └──────────────┬─────────────────────────┘   └─────────────────────┘
-                  ▼
-         ┌──── BUS DE ESTADO ────┐  (resumen comprimido: tasas por tipo/región,
-         │  JSON por ventana Δt  │   ensambles activos, salidas motoras/DN)
-         └───┬──────────────┬────┘
-             ▼              ▼
-     ┌── ANÁLISIS ──┐   ┌──────────── LAYA ("córtex prefrontal") ─────────┐
-     │ PCIst / LZ   │   │ Fase A: ESCUCHA → clasifica el estado (choice/  │
-     │ recurrencia  │   │   score/booleano con probabilidades)            │
-     │ persistencia │   │ Fase B: ACTÚA → elige 1 de N acciones de        │
-     │ legibilidad  │   │   estimulación sobre un conjunto FIJO y pequeño │
-     └──────┬───────┘   │   de neuronas (p. ej., dopaminérgicas del MB)   │
-            │           └──────────────────────┬──────────────────────────┘
-            ▼                                  │ (canal limitado)
-     ┌────────────── DASHBOARD WEB 3D ─────────┴───────────────────────────┐
-     │ neuronas en posición real · spikes · métricas · decisiones de Laya  │
-     └─────────────────────────────────────────────────────────────────────┘
+╔══════════════════════════ BrainOS (Arch + Okimarchy/Niri) ═══════════════════════════╗
+║                                                                                       ║
+║   ┌──────────── SANDBOX: neko (Docker, WebRTC) ─────────────┐   tú (navegador)        ║
+║   │  escritorio virtual: navegador, editor, apps de test    │◄──── miras / interactúas ║
+║   └───────▲───────────────────────────────┬────────────────┘                          ║
+║           │ ratón/teclado (xdotool)        │ píxeles (captura X11)                      ║
+║   ┌───────┴──────┐                 ┌───────▼───────┐                                   ║
+║   │ motor  [Rust]│                 │ retina [Rust] │ píxeles → tasas de fotorreceptores ║
+║   └───────▲──────┘                 └───────┬───────┘                                   ║
+║   ┌───────┴───────┐   intención    ┌───────▼────────────────────────────┐              ║
+║   │ ghost  [Rust] │◄───────────────│ CEREBRO [Python/Brian2 → GPU opc.] │              ║
+║   │ overlay:      │                │ conectoma real (FlyWire/MaleCNS/   │              ║
+║   │ fantasma /    │                │ BANC), LIF, neurotransmisores      │              ║
+║   │ validado /    │                └───────┬──────────────▲─────────────┘              ║
+║   │ autónomo      │                        │ bus de estado │ estimulación limitada     ║
+║   └───────▲───────┘                ┌───────▼──────────────┴─────────────┐              ║
+║           │ ¿válido? p=0.93        │ bus  [Rust]  (estado comprimido)   │              ║
+║   ┌───────┴────────┐               └───┬───────────┬──────────────┬─────┘              ║
+║   │ cortex [Rust]  │◄──────────────────┘           │              │                    ║
+║   │ Laya (candle/  │                      ┌────────▼─────┐ ┌──────▼──────────┐          ║
+║   │ ONNX): decide  │                      │ voice [Rust] │ │ memory [Rust]   │          ║
+║   └────────────────┘                      │ RWKV-7 notas │ │ grafo episódico │          ║
+║                                           │ + SEAL/EGG   │ │ semántico/proc. │          ║
+║                                           └──────────────┘ └─────────────────┘          ║
+║   ┌──────────────────────────── dashboard [Rust + WebGL] ───────────────────────────┐  ║
+║   │ cerebro 3D en directo · métricas · decisiones de Laya · notas · autonomía        │  ║
+║   └──────────────────────────────────────────────────────────────────────────────────┘  ║
+╚═══════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
-**Regla del canal Laya → cerebro:** Laya **no** puede tocar pesos, conectividad, parámetros ni spikes individuales. Solo puede emitir una acción de un menú cerrado (p. ej., "estimular grupo X a f Hz durante t ms"). Así se sabe dónde termina la biología y dónde empieza Laya.
+## 4. Componentes y decisiones
 
-## 5. Componentes elegidos (verificados que existen)
-
-| Pieza | Uso | Nota realista |
+| Pieza | Decisión | Por qué / nota realista |
 |---|---|---|
-| **FlyWire FAFB v783** | Fase 0: reproducir el modelo publicado | ~139k neuronas, solo cerebro |
-| **Shiu et al. — `philshiu/Drosophila_brain_model`** (Brian2, MIT) | Motor LIF de referencia | Pensado para v630, con instrucciones para v783; validado frente a experimentos (Nature 2024) |
-| **MaleCNS v1.0** (Janelia/Google/Cambridge/MRC-LMB) | **Sustrato principal** a partir de la fase 1 | 166.700 neuronas, 11.710 tipos, cerebro + VNC, totalmente revisado; acceso por neuPrint |
-| **BANC** (`htem/BANC-project`) | Segundo animal (hembra), validación cruzada y sinapsis individuales | ~188k neuronas, ~199M sinapsis predichas; **no hay simulador público**, el port es trabajo propio |
-| `Kisame76/drosophila-brain-mlx` | Referencia de port a MaleCNS + control barajado | Apple MLX; se usa como referencia de método, no como dependencia |
-| `eonsystemspbc/fly-brain` | Referencia de backends (PyTorch/GeNN) | **GPL-2.0**: no copiar código a este repo sin decidir la licencia |
-| Base de neurotransmisores de Drosophila (fly connectomics) | Signo y tipo de sinapsis con nivel de evidencia | Sustituye al "GABA/Glu = −1, resto = +1" en fases avanzadas |
-| **Laya** (`convaiinnovations/laya`, Apache-2.0) | Córtex prefrontal: escucha y decide | 421M (ModernBERT-large). **No genera texto**: puntúa opciones. Contexto 512 tokens (EN) / hasta 8192 (multilingüe). Viene sobreconfiado → recalibrar temperatura. Zero-shot flojo (0,362 en su benchmark) |
-| **RWKV-7 "Goose"** (`BlinkDL/RWKV-LM`) | *Más adelante:* capa que "escucha / imita / habla" | Se sustituye RWKV-v2 (2021) por v7: RNN de estado constante, modelos de 0,1B/0,4B/1,5B/2,9B. Se usa el 0,1B o el 0,4B |
-| **PCIst** (Python) | Complejidad perturbacional | Observable global, no "medidor de conciencia" |
-| **PyPhi** | IIT, solo en microcircuitos de ≤ ~10 nodos | Φ del cerebro entero es computacionalmente inviable |
-| **pycma / ES** | Entrenamiento evolutivo en CPU | Ver §7 |
-| FlyVis, FlyGym/NeuroMechFly v2, NEST, NEURON, Arbor | **Aparcados** | Se retoman solo si un test lo requiere (visión rica, cuerpo, biofísica) |
+| **Cerebro** | Python + Brian2 (LIF de Shiu et al.), luego port a MaleCNS y BANC | Es "el cerebro de verdad" y **no** se reescribe en Rust. Se puede acelerar con GeNN/PyTorch si hay GPU |
+| **Conectomas** | FlyWire v783 (validación) → **MaleCNS v1.0** (principal) → **BANC** (segundo animal) | Ya están en `vault/`. Sinapsis individuales solo en subcircuitos (no caben en RAM) |
+| **Humano / otros** | H01 (neuronas humanas reales), TVB (conectomas humano, macaco y ratón; PCI en TVB-AdEx), C. elegans y larva completos como controles | No existe cerebro humano completo a nivel sináptico: lo humano entra como modelos de neurona y escala global |
+| **Laya** (córtex prefrontal) | Inferencia desde Rust (candle u ONNX Runtime) | Decide y valida (`choice`/`score`/booleano con probabilidad). **No genera texto**. Recalibrar temperatura |
+| **RWKV-7** (voz) | G1d 0,1B (en `vault/`), inferencia en Rust con `candle-rwkv` (CPU) o `web-rwkv` (GPU) | RNN de estado constante. EGGROLL ya se demostró sobre RWKV-7 |
+| **Base del S.O.** | **Arch Linux + Okimarchy** (Omarchy con **Niri**, compositor Wayland en Rust) | Un kernel propio en Rust no ejecutaría Docker, neko ni Python |
+| **Userland propio** | Todo en **Rust**: `retina`, `motor`, `ghost`, `bus`, `cortex`, `voice`, `memory`, `dashboard`, `brainosd` (supervisor) | Workspace Cargo en `brainos/` |
+| **Sandbox** | **neko** (m1k1o) en Docker; el cerebro solo toca este escritorio | Aislamiento. Tú lo ves y controlas por WebRTC |
+| **Visualización** | Dashboard WebGL con neuronas en su posición real y spikes en directo | Somas y posiciones en los datos de BANC, FlyWire y MaleCNS |
 
-## 6. Rol de Laya
+## 5. El cuerpo digital: de píxeles a spikes y de spikes a ratón
 
-- **Fase A — Escucha (solo lectura).** Laya recibe el resumen JSON del bus de estado y responde preguntas tipadas del estilo "¿qué estímulo recibió?", "¿está en estado de alimentación/aseo/reposo?" o "¿hay estímulo sí/no?".
-  - *Test de legibilidad:* acierto de Laya frente al azar, frente a un clasificador lineal simple y frente a la misma tarea con el conectoma barajado.
-- **Fase B — Actúa (canal limitado).** Laya elige, de un menú cerrado, una acción de estimulación sobre un grupo fijo de neuronas. Se mide si el sistema **Laya + cerebro** resuelve tareas que el cerebro solo no resuelve, y si esa ventaja desaparece con el conectoma barajado.
-- **Fase C (posterior) — RWKV-7.** Capa que recibe la misma interfaz y aprende a "escuchar" el flujo de estados y a producir texto. Solo después de que A y B tengan resultados.
+- **Entrada (retina):** captura de pantalla de neko → reducción a una rejilla hexagonal tipo omatidios → tasas de Poisson a los fotorreceptores R1–R8 del conectoma. Opcional: FlyVis como front-end visual validado.
+- **Salida (motor):** tasas de neuronas descendentes y motoras seleccionadas → decodificador → `dx, dy`, clic, tecla.
+  - El mapeo neurona→acción es **hipótesis** (la mosca no tiene ratón) y queda documentado.
+  - Las teclas salen de un alfabeto de acciones pequeño, no de texto libre.
+- **Notas en pantalla:** las escribe RWKV-7 a partir del estado del bus (qué percibe, qué quiere hacer, con qué probabilidad según Laya). Aparecen en la capa fantasma.
 
-**Limitación a vigilar:** el texto del estado debe caber en el contexto de Laya, así que el bus comprime (tasas por tipo celular o región, no 166k valores).
+## 6. Escalera de autonomía (modo fantasma)
 
-## 7. Entrenamiento: evolución en CPU, minúscula pero minuciosa
-
-Objetivo: entrenar **desde la nube (sin GPU)** sin que sufra el portátil.
-
-1. **Qué se entrena (el "genoma") — nunca la anatomía:**
-   - ganancias/umbrales **por tipo celular**, no por neurona (idea análoga a FlyVis, que ajusta todo el sistema visual con 734 parámetros);
-   - **parámetros de la regla de plasticidad** (p. ej., tasa y ventana de una regla dopaminérgica en el cuerpo fungiforme), no los pesos uno a uno;
-   - la política de estimulación de Laya en la fase B y su calibración de temperatura.
-   - Tamaño objetivo: **10²–10³ parámetros**.
-2. **Cómo:** estrategias evolutivas (CMA-ES / OpenAI-ES). Solo necesitan *evaluar* candidatos, sin backprop por la red spiking, y cada evaluación va a un core.
-3. **Barato pero minucioso:**
-   - **Subcircuitos:** entrenar sobre el subgrafo a k saltos de las entradas y salidas del test (miles de neuronas, no 166k) y **validar después en el cerebro completo**;
-   - episodios cortos (cientos de ms biológicos) y *curriculum* de fácil a difícil;
-   - **descarte:** los candidatos que fallan los tests lógicos básicos se eliminan antes de las evaluaciones caras;
-   - **checkpoints pequeños** (genoma + semilla + hash) guardados en el repo en cada generación, porque el contenedor es efímero y el entrenamiento tiene que poder reanudarse entre sesiones;
-   - para Laya, si es viable: cachear los *embeddings* del backbone congelado y ajustar solo la cabeza o la temperatura.
-4. **Batería de tests lógicos (de menor a mayor):**
-   1. detección (estímulo sí/no);
-   2. discriminación A vs. B;
-   3. AND / OR;
-   4. **XOR**;
-   5. retardo con memoria (el estímulo desaparece y la respuesta llega después);
-   6. condicionamiento olor + recompensa;
-   7. reversión.
-5. **Trampa conocida (reservoir computing):** cualquier red recurrente aleatoria con una lectura entrenada resuelve XOR. Por eso **el criterio de éxito no es resolver la tarea, sino resolverla mejor que el conectoma barajado con el mismo presupuesto de entrenamiento**.
-
-## 8. Tests y métricas
-
-| Test | Métrica | "Funciona" si… |
+| Nivel | Qué pasa | Cómo se sube |
 |---|---|---|
-| Reproducción Shiu (sabor/tacto → alimentación/aseo) | respuestas de neuronas motoras vs. el paper | se reproducen sus predicciones principales |
-| Perturbación | PCIst / Lempel-Ziv, reposo vs. estímulo | diferencia estable entre condiciones y distinta del barajado |
-| Recurrencia / persistencia | duración de la actividad tras quitar el estímulo | persistencia medible y reproducible con la misma semilla |
-| Legibilidad (Laya A) | accuracy, ECE calibrado | > azar, > barajado, ≥ clasificador lineal |
-| Tareas lógicas (evolución) | tasa de éxito por nivel | conectoma real > barajado (test estadístico, varias semillas) |
-| Simbiosis (Laya B) | éxito de cerebro + Laya vs. cerebro solo vs. Laya sobre barajado | ganancia atribuible al acoplamiento, no solo a Laya |
+| **0 · Fantasma** | Clics, teclas y notas se **dibujan** semitransparentes; nada se ejecuta. Se registra todo | — |
+| **1 · Validado** | Laya evalúa cada acción ("¿es válida?", p) y se compara con lo que tú harías o con el objetivo de la tarea | Acierto ≥ umbral durante N acciones (p. ej., ≥ 90 % en 500) |
+| **2 · Autónomo por tarea** | Las acciones con p ≥ umbral se ejecutan de verdad en esa tarea o app | **Métrica + tu permiso explícito** |
+| **3 · Autónomo general** | Trabaja solo en el sandbox; tú supervisas | Métrica sostenida + tu permiso. Se revoca con un botón |
 
-## 9. Visualización — dashboard web 3D
+El sistema **pide** permiso para subir de nivel; nunca se lo concede a sí mismo.
 
-- Nube de puntos con la **posición real** del soma de cada neurona (del dataset), coloreada por región o tipo, con spikes que se encienden.
-- Paneles de tasas por región, métricas (PCI, persistencia), la entrada y la respuesta de Laya con probabilidades, y la evolución del fitness.
-- **Modo reproducción:** la simulación se calcula en la nube y se graba (spikes comprimidos); el navegador solo la reproduce. Así el portátil solo abre una web.
-- Tecnología prevista: three.js (WebGL) con datos estáticos precalculados.
+## 7. Tests del sandbox (de reflejo a trabajo)
 
-## 10. Cómputo y persistencia
+1. Seguir con el cursor un objeto que se mueve (reflejo optomotor).
+2. Huir de o evitar un estímulo "amenaza" (looming).
+3. Clicar la "comida" y no el "veneno" (discriminación con recompensa).
+4. Pulsar la tecla correcta ante un símbolo (asociación).
+5. AND / OR / **XOR** y retardo con memoria.
+6. Tareas de escritorio simples: abrir una app, cerrar una ventana, escribir un texto dictado.
+7. Trabajo autónomo en una mini-tarea definida.
 
-| Recurso | Qué corre ahí |
-|---|---|
-| **Nube (este contenedor):** 4 CPU, 15 GB RAM, **sin GPU**, ~30 GB de disco, **efímero** | descarga/preprocesado de conectomas, LIF en CPU (Brian2 o NumPy/SciPy dispersos), evolución, Laya en CPU, generación de las grabaciones del dashboard |
-| **Portátil** (ROG Strix G18, 8 GB VRAM) | solo abrir el dashboard y, **opcionalmente**, ejecuciones ligeras. Nada pesado por defecto |
+Cada test se corre también con el **conectoma barajado** y con **Laya/RWKV apagados**. Expectativa realista: los reflejos (1–3) son probables; lo demás depende de cuánto aporten Laya, la memoria y el aprendizaje, y medir eso es el experimento.
 
-Límites que condicionan el diseño:
-- la tabla de sinapsis individuales de BANC (~199M filas) **no cabe** en 15 GB de RAM, así que se trabaja con pares agregados y se usan sinapsis individuales solo en subcircuitos;
-- la velocidad del LIF en CPU está **por medir** en la fase 0 y fija cuántas evaluaciones evolutivas caben por sesión;
-- todo artefacto útil (genomas, métricas, grabaciones pequeñas) se hace commit; los datos crudos grandes **no** van a git, sino a un script de descarga reproducible.
+## 8. Aprendizaje: MEM-EGGROLL (memoria que guía la evolución)
 
-## 11. Fases e hitos
+Objetivo: aprender **en la nube sin GPU**, sin backprop por la red spiking y sin tocar la anatomía.
+
+**Piezas que existen (verificadas):**
+
+| Pieza | Qué aporta | Código |
+|---|---|---|
+| **EGGROLL** (ES low-rank, `ΔW = ABᵀ`) | Evolución con poblaciones grandes y solo pasadas hacia delante; demostrado en RWKV-7 | `external/learning/HyperscaleES`, `nano-egg` |
+| **SEAL** | El modelo genera sus propias "auto-ediciones" (datos o directivas de ajuste) y aprende a generarlas con RL | `external/learning/SEAL` |
+| **IER / SER** (ESER/XSER/MSER) | Repetición inmediata y espaciada de episodios exitosos | `external/learning/Repetition` (MIT) |
+| **Reincarnating RL** | Reutilizar políticas y cómputo previos | `external/learning/reincarnating_rl` |
+| **HeLa-Mem** | Grafo episódico hebbiano + consolidación semántica | `external/memory/HeLa-Mem` |
+| **SYNAPSE** | Activación propagada + decaimiento + inhibición lateral | Paper; el código "se publicará" (no disponible) |
+| **CMA-ES** | ES clásico para genomas pequeños | `external/learning/pycma` |
+
+**Nuestra fusión (hipótesis nueva, a validar):**
+
+1. **Episodios estructurados:** contexto, eventos (VER, MOVER, CLIC…) y resultado (recompensa, novedad, sorpresa), guardados en un **grafo episódico → semántico → procedural**.
+2. **Recuperación por activación propagada** con decaimiento e inhibición lateral: el estado actual activa recuerdos y conceptos relacionados.
+3. **El "reactor de memoria" decide:** repetir (IER/SER), revivir un fallo cambiando solo el tramo crítico, o explorar (EGGROLL).
+4. **EGGROLL guiado por memoria:**
+   - `Δθ = M_memoria ⊙ (ABᵀ)`: la memoria enfoca qué subespacio mutar;
+   - el **rango** `r` crece con la incertidumbre, la novedad y el conflicto entre recuerdos.
+5. **SEAL sin gradientes:** RWKV genera sus auto-ediciones (notas, reglas, ejemplos) y la actualización de pesos se hace con **EGGROLL low-rank** en vez de SFT. Esto lo hace viable en CPU y es parte de la novedad.
+6. **Reencarnación:** cada generación de política renace con sus pesos **y** su memoria.
+7. **Vigilia / sueño:** de día actúa; de "noche" repite, consolida, recombina trayectorias (A→B + B→C ⇒ A→C, contrafactuales) y olvida.
+
+**Qué se evoluciona:**
+- en el cerebro: ganancias por tipo celular y la regla de plasticidad (nunca la conectividad);
+- en Laya: temperatura y política de validación;
+- en RWKV-7: adaptadores low-rank.
+
+**Criterio de éxito:** aprender más rápido y mejor que (a) ES sin memoria, (b) el conectoma barajado y (c) sin repetición. Si no mejora, se reporta.
+
+## 9. Dónde corre
+
+| Entorno | Qué | Estado |
+|---|---|---|
+| **Nube (este contenedor)** | 4 CPU, 15 GB RAM, sin GPU, Docker, efímero. Cerebro, neko, servicios Rust y MEM-EGGROLL en CPU | Primero |
+| **VM (QEMU/VirtualBox)** | ISO de BrainOS (Arch + Okimarchy/Niri + servicios + neko) | Segundo |
+| **USB en el portátil** (ROG Strix G18, 8 GB VRAM) | BrainOS arrancable. Aquí el cerebro puede usar GPU | Último. El portátil no debe sufrir: solo cuando esté listo |
+
+Persistencia: todo lo útil se commitea. Pesos y datos en `vault/` (trozos <95 MB + sha256); lo gigante, por `tools/vault.py fetch --all`.
+
+## 10. Fases e hitos
 
 | Fase | Entregable | Hecho cuando |
 |---|---|---|
-| **0 — Base** | Descarga reproducible de FlyWire v783 + LIF de Shiu corriendo en CPU aquí; benchmark de velocidad | se reproducen 2–3 experimentos del paper con semilla fija |
-| **1 — Sustrato principal** | Port a MaleCNS v1.0 con formato común (neurona, par, NT, confianza, fuente) + conectoma barajado | mismos tests corren en FlyWire, MaleCNS y barajado |
-| **2 — Ver el cerebro** | Dashboard 3D en modo reproducción | se ve un experimento de la fase 0 en el navegador |
-| **3 — Laya escucha** | Bus de estado + test de legibilidad | tabla de resultados frente a azar, barajado y lineal |
-| **4 — Evolución** | Motor CMA-ES en CPU con checkpoints + batería lógica | curva de fitness real frente a barajado |
-| **5 — Laya actúa** | Canal limitado Laya → grupo neuronal + tests de simbiosis | tabla de ablación completa |
-| **6 — Marcadores globales** | PCIst/LZ, persistencia; PyPhi en microcircuitos | informe con resultados y límites |
-| **7 — BANC y RWKV-7** | Validación cruzada en segundo animal; capa RWKV-7 que escucha | resultados replicados (o no) en BANC |
+| **0 ✅ Base** | Shiu LIF en CPU (azúcar → MN9: 83 Hz v630, 79 Hz v783) | Hecho |
+| **1 · Controles** | Conectoma barajado + 30 ensayos + curva de frecuencia | Diferencia real vs. barajado cuantificada |
+| **2 · Sustrato** | Formato común + port a MaleCNS; BANC como segundo animal | Mismos tests en los tres |
+| **3 · Esqueleto BrainOS** | Workspace Rust (`brainosd`, `bus`) + neko corriendo en la nube | neko accesible y el bus transmite estado |
+| **4 · Retina + motor** | Píxeles → fotorreceptores; descendentes → ratón (en fantasma) | Test 1 (seguir objeto) medido vs. barajado |
+| **5 · Dashboard 3D** | Cerebro en directo junto al escritorio | Ves spikes y overlay fantasma a la vez |
+| **6 · Laya córtex** | Laya en Rust: escucha (legibilidad) y valida acciones | Tabla vs. azar, barajado y lineal |
+| **7 · Voz** | RWKV-7 en Rust escribe notas del estado en el overlay | Notas coherentes con el estado (evaluado) |
+| **8 · MEM-EGGROLL** | Memoria en grafo + EGGROLL guiado + SEAL sin gradientes + sueño | Curvas vs. ES sin memoria y vs. barajado |
+| **9 · Autonomía** | Escalera fantasma → validado → autónomo con permiso | Nivel 2 alcanzado en alguna tarea |
+| **10 · Marcadores** | PCI (PCIst/LZ), persistencia, PyPhi IIT 4.0 en microcircuitos, comparación con TVB humano | Informe con resultados y límites |
+| **11 · S.O. arrancable** | ISO Arch + Okimarchy/Niri + BrainOS → VM → USB | Arranca en VM y en el portátil |
 
-## 12. Riesgos y límites honestos
+## 11. Riesgos y límites honestos
 
-- **LIF es una simplificación fuerte.** Sin parámetros biofísicos por neurona, añadir Hodgkin-Huxley "porque sí" sería inventar.
-- **Sinapsis predichas** (F1 ≈ 0,83 en BANC): errores estructurales reales.
-- **Signo de las sinapsis** inferido del neurotransmisor, sin conocer el receptor concreto.
-- **Laya no está hecho para esto:** entiende texto/JSON de negocio, no actividad neuronal. Puede que la legibilidad sea baja; eso también es un resultado.
-- **Presupuesto de cómputo:** sin GPU, el cerebro completo solo se evalúa en validación, no en cada generación.
-- **Interpretación:** ningún resultado de este proyecto demuestra conciencia. Se reporta como marcadores + controles.
+- **LIF es una simplificación**; las sinapsis son predichas (BANC F1 ≈ 0,83) y el signo sale del neurotransmisor.
+- **El mapeo píxel→fotorreceptor y neurona→ratón es inventado por necesidad:** se marca como hipótesis y se contrasta con el conectoma barajado.
+- **Un cerebro de mosca no va a "usar un ordenador" como un humano.** La autonomía real dependerá de Laya, la memoria y el aprendizaje, y medir **cuánto aporta cada parte** es el resultado.
+- **Velocidad:** ~8 s de CPU por segundo biológico del cerebro completo. El tiempo real en la nube exige subcircuitos o GPU (portátil o alquilada).
+- **SEAL y EGGROLL están probados en LLM, no con un cerebro spiking;** la fusión MEM-EGGROLL es nueva y puede fallar.
+- **Licencias:** varios submódulos son GPL o no tienen licencia; no se copia su código al userland propio.
+- **Nada de esto demuestra conciencia.** Se reportan marcadores con controles.
 
-## 13. Fuera de alcance (v1)
+## 12. Fuera de alcance (por ahora)
 
-Cuerpo biomecánico (FlyGym), visión rica (FlyVis), biofísica multicompartimental (NEURON/Arbor), neuropéptidos con cinética, fusión de conectomas y generación de texto (hasta la fase 7).
+Cuerpo biomecánico (FlyGym), biofísica multicompartimental masiva, kernel propio en Rust, acciones fuera del sandbox, acceso de red libre del cerebro.
 
-## 14. Fuentes
+## 13. Decisiones pendientes
 
-- BANC — https://github.com/htem/BANC-project · https://blog.flywire.ai/2025/11/03/the-banc-brain-and-nerve-cord/
-- MaleCNS — https://www.janelia.org/project-team/flyem/male-cns-connectome · https://male-cns.janelia.org/ · https://www.cell.com/cell/fulltext/S0092-8674(26)00942-6
-- Shiu et al. LIF — https://github.com/philshiu/Drosophila_brain_model
-- fly-brain (multi-backend, GPL-2.0) — https://github.com/eonsystemspbc/fly-brain
-- drosophila-brain-mlx — https://github.com/Kisame76/drosophila-brain-mlx
-- FlyBrain (navegador) — https://github.com/snedea/flybrain
-- Lista curada — https://github.com/cobanov/awesome-fly
-- FlyVis — https://github.com/TuragaLab/flyvis
-- FlyGym / NeuroMechFly v2 — https://github.com/NeLy-EPFL/flygym
-- Laya — https://huggingface.co/convaiinnovations/laya
-- RWKV — https://github.com/BlinkDL/RWKV-LM
+- Licencia del código propio (MIT/Apache).
+- Neuronas concretas de entrada (fotorreceptores) y salida (descendentes) y el decodificador de acciones.
+- Umbrales exactos de la escalera de autonomía.
+- Si se alquila una GPU puntual para las fases 8–10.
 
-## 15. Decisiones pendientes
+## 14. Fuentes principales
 
-- Licencia del repo (MIT/Apache compatible con Shiu y Laya; evitar mezclar GPL sin decidirlo).
-- Formato exacto del bus de estado (qué agregación cabe en el contexto de Laya).
-- Grupo neuronal concreto sobre el que actúa Laya en la fase B (candidato: dopaminérgicas PAM/PPL1 del cuerpo fungiforme).
-- Si en algún momento se alquila una GPU puntual para acelerar las fases 4–7.
+BANC https://github.com/htem/BANC-project · MaleCNS https://male-cns.janelia.org/ · FlyWire v783 https://zenodo.org/records/10676866 · Shiu LIF https://github.com/philshiu/Drosophila_brain_model · Laya https://huggingface.co/convaiinnovations/laya · RWKV https://github.com/BlinkDL/RWKV-LM · candle-rwkv https://github.com/nkypy/candle-rwkv · web-rwkv https://github.com/cryscan/web-rwkv · neko https://github.com/m1k1o/neko · Niri https://github.com/YaLTeR/niri · Okimarchy https://github.com/cristian-fleischer/okimarchy · Omarchy https://github.com/basecamp/omarchy · EGGROLL https://arxiv.org/abs/2511.16652 · https://github.com/ESHyperscale/HyperscaleES · SEAL https://arxiv.org/abs/2506.10943 · https://github.com/Continual-Intelligence/SEAL · IER/SER https://github.com/UoA-CARES/Repetition · Reincarnating RL https://arxiv.org/abs/2206.01626 · HeLa-Mem https://arxiv.org/abs/2604.16839 · SYNAPSE https://arxiv.org/abs/2601.02744 · Catálogo completo: `docs/research/catalogo_recursos.md`

@@ -167,3 +167,42 @@
 [submodule "external/learning/e2l-cgp-snn"]
 	path = external/learning/e2l-cgp-snn
 	url = https://github.com/Happy-Algorithms-League/e2l-cgp-snn
+[submodule "external/os/neko"]
+	path = external/os/neko
+	url = https://github.com/m1k1o/neko
+[submodule "external/os/niri"]
+	path = external/os/niri
+	url = https://github.com/YaLTeR/niri
+[submodule "external/os/omarchy"]
+	path = external/os/omarchy
+	url = https://github.com/basecamp/omarchy
+[submodule "external/os/okimarchy"]
+	path = external/os/okimarchy
+	url = https://github.com/cristian-fleischer/okimarchy
+[submodule "external/learning/SEAL"]
+	path = external/learning/SEAL
+	url = https://github.com/Continual-Intelligence/SEAL
+[submodule "external/learning/HyperscaleES"]
+	path = external/learning/HyperscaleES
+	url = https://github.com/ESHyperscale/HyperscaleES
+[submodule "external/learning/nano-egg"]
+	path = external/learning/nano-egg
+	url = https://github.com/ESHyperscale/nano-egg
+[submodule "external/learning/Repetition"]
+	path = external/learning/Repetition
+	url = https://github.com/UoA-CARES/Repetition
+[submodule "external/learning/reincarnating_rl"]
+	path = external/learning/reincarnating_rl
+	url = https://github.com/google-research/reincarnating_rl
+[submodule "external/memory/HeLa-Mem"]
+	path = external/memory/HeLa-Mem
+	url = https://github.com/ReinerBRO/HeLa-Mem
+[submodule "external/lang/candle"]
+	path = external/lang/candle
+	url = https://github.com/huggingface/candle
+[submodule "external/lang/candle-rwkv"]
+	path = external/lang/candle-rwkv
+	url = https://github.com/nkypy/candle-rwkv
+[submodule "external/lang/web-rwkv"]
+	path = external/lang/web-rwkv
+	url = https://github.com/cryscan/web-rwkv
