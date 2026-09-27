@@ -1,53 +1,372 @@
 {
-  "_doc": "Todo recurso externo. in_repo=true -> se guarda troceado en vault/ (git). in_repo=false -> solo via `python tools/vault.py fetch --all`.",
-  "items": [
-    {"id":"laya", "kind":"hf_repo", "repo":"convaiinnovations/laya", "license":"Apache-2.0", "in_repo":true},
-    {"id":"rwkv7-g1d-0.1b", "kind":"hf_file", "repo":"BlinkDL/rwkv7-g1", "file":"rwkv7-g1d-0.1b-20260129-ctx8192.pth", "license":"Apache-2.0", "in_repo":true},
-    {"id":"rwkv7-g1d-0.4b", "kind":"hf_file", "repo":"BlinkDL/rwkv7-g1", "file":"rwkv7-g1d-0.4b-20260210-ctx8192.pth", "license":"Apache-2.0", "in_repo":false},
-
-    {"id":"malecns/annotations", "kind":"url", "url":"https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"malecns/neurotransmitters", "kind":"url", "url":"https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"malecns/connectome-weights", "kind":"url", "url":"https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"malecns/body-stats", "kind":"url", "url":"https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-stats-male-cns-v1.0-minconf-0.5.feather", "license":"CC-BY-4.0", "in_repo":false},
-    {"id":"malecns/syn-partners", "kind":"url", "url":"https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-partners-male-cns-v1.0-minconf-0.5.feather", "license":"CC-BY-4.0", "in_repo":false},
-    {"id":"malecns/syn-points", "kind":"url", "url":"https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-points-male-cns-v1.0-minconf-0.5.feather", "license":"CC-BY-4.0", "in_repo":false},
-    {"id":"malecns/tbar-neurotransmitters", "kind":"url", "url":"https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/tbar-neurotransmitters-male-cns-v1.0.feather", "license":"CC-BY-4.0", "in_repo":false},
-
-    {"id":"flywire783/proofread_root_ids", "kind":"url", "url":"https://zenodo.org/api/records/10676866/files/proofread_root_ids_783.npy/content", "name":"proofread_root_ids_783.npy", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"flywire783/neuropil_count_pre", "kind":"url", "url":"https://zenodo.org/api/records/10676866/files/per_neuron_neuropil_count_pre_783.feather/content", "name":"per_neuron_neuropil_count_pre_783.feather", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"flywire783/neuropil_count_post", "kind":"url", "url":"https://zenodo.org/api/records/10676866/files/per_neuron_neuropil_count_post_783.feather/content", "name":"per_neuron_neuropil_count_post_783.feather", "license":"CC-BY-4.0", "in_repo":false},
-    {"id":"flywire783/proofread_connections", "kind":"url", "url":"https://zenodo.org/api/records/10676866/files/proofread_connections_783.feather/content", "name":"proofread_connections_783.feather", "license":"CC-BY-4.0", "in_repo":false},
-    {"id":"flywire783/synapses", "kind":"url", "url":"https://zenodo.org/api/records/10676866/files/flywire_synapses_783.feather/content", "name":"flywire_synapses_783.feather", "license":"CC-BY-4.0", "in_repo":false},
-
-    {"id":"banc/meta", "kind":"dataverse", "file_id":14033740, "name":"banc_888_meta.feather", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/edgelist_simple_v3", "kind":"dataverse", "file_id":13918810, "name":"banc_888_edgelist_simple_v3.feather", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/edgelist_split_v3", "kind":"dataverse", "file_id":13992837, "name":"banc_888_edgelist_split_v3.feather", "license":"CC-BY-4.0", "in_repo":false},
-    {"id":"banc/nt_prediction_v2", "kind":"dataverse", "file_id":13916450, "name":"banc_888_neurotransmitter_prediction_v2.csv", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/metrics", "kind":"dataverse", "file_id":14034271, "name":"banc_888_metrics.feather", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/cell_info", "kind":"dataverse", "file_id":13916453, "name":"cell_info.parquet", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/cell_representative_point", "kind":"dataverse", "file_id":13916454, "name":"cell_representative_point.parquet", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/somas", "kind":"dataverse", "file_id":13916460, "name":"somas_v1.parquet", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/backbone_proofread", "kind":"dataverse", "file_id":13916445, "name":"backbone_proofread.parquet", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/codex_annotations", "kind":"dataverse", "file_id":13916455, "name":"codex_annotations.parquet", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/peripheral_nerves", "kind":"dataverse", "file_id":13916458, "name":"peripheral_nerves.parquet", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/neck_connective_y121000", "kind":"dataverse", "file_id":13916456, "name":"neck_connective_y121000.parquet", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/neck_connective_y92500", "kind":"dataverse", "file_id":13916457, "name":"neck_connective_y92500.parquet", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/neuropil_meshes", "kind":"dataverse", "file_id":13917708, "name":"banc_neuropil_meshes.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/betweenness_v2", "kind":"dataverse", "file_id":13916446, "name":"banc_888_betweenness_all_to_all_v2.csv", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/spectral_clustering_v2", "kind":"dataverse", "file_id":13916447, "name":"banc_888_cns_network_spectral_clustering_v2.csv", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/synapse_review_v3", "kind":"dataverse", "file_id":14023097, "name":"2026-05-14_aelysia_synapse_sample_complete_v3.csv", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/synapse_evaluation", "kind":"dataverse", "file_id":13999881, "name":"251013_synapse_evaluation.csv", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/problem_regions", "kind":"dataverse", "file_id":13916443, "name":"banc_problem_regions.csv", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/nt_ground_truth", "kind":"dataverse", "file_id":13917726, "name":"banc_nt_ground_truth.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/neuropeptides_archive", "kind":"dataverse", "file_id":13917714, "name":"drosophila_neuropeptides_archive.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/neurotransmitters_archive", "kind":"dataverse", "file_id":13917715, "name":"drosophila_neurotransmitters_archive.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/influence_calculator", "kind":"dataverse", "file_id":13917713, "name":"connectome_influence_calculator_archive.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/supplemental_data", "kind":"dataverse", "file_id":13917709, "name":"banc_supplemental_data.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/behavior", "kind":"dataverse", "file_id":13917712, "name":"behavior.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/registration_brain", "kind":"dataverse", "file_id":13917718, "name":"registration_brain_jrc2018f.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/registration_vnc", "kind":"dataverse", "file_id":13917719, "name":"registration_vnc_jrc2018vncf.zip", "license":"CC-BY-4.0", "in_repo":true},
-    {"id":"banc/synapses_v3_enriched", "kind":"dataverse", "file_id":13992860, "name":"banc_888_synapses_v3_enriched.parquet", "license":"CC-BY-4.0", "in_repo":false},
-    {"id":"banc/nt_prediction_v3_per_synapse", "kind":"dataverse", "file_id":13916491, "name":"banc_nt_prediction_v3_w_sizethresh_10_05042026.parquet", "license":"CC-BY-4.0", "in_repo":false},
-    {"id":"banc/swc_skeletons", "kind":"dataverse", "file_id":13952186, "name":"banc_swc_skeletons.zip", "license":"CC-BY-4.0", "in_repo":false}
-  ]
+ "_doc": "Todo recurso externo. in_repo=true -> se guarda troceado en vault/ (git). in_repo=false -> solo via `python tools/vault.py fetch --all`.",
+ "items": [
+  {
+   "id": "laya",
+   "kind": "hf_repo",
+   "repo": "convaiinnovations/laya",
+   "license": "Apache-2.0",
+   "in_repo": true
+  },
+  {
+   "id": "rwkv7-g1d-0.1b",
+   "kind": "hf_file",
+   "repo": "BlinkDL/rwkv7-g1",
+   "file": "rwkv7-g1d-0.1b-20260129-ctx8192.pth",
+   "license": "Apache-2.0",
+   "in_repo": true
+  },
+  {
+   "id": "rwkv7-g1d-0.4b",
+   "kind": "hf_file",
+   "repo": "BlinkDL/rwkv7-g1",
+   "file": "rwkv7-g1d-0.4b-20260210-ctx8192.pth",
+   "license": "Apache-2.0",
+   "in_repo": false
+  },
+  {
+   "id": "malecns/annotations",
+   "kind": "url",
+   "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "malecns/neurotransmitters",
+   "kind": "url",
+   "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "malecns/connectome-weights",
+   "kind": "url",
+   "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "malecns/body-stats",
+   "kind": "url",
+   "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-stats-male-cns-v1.0-minconf-0.5.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "malecns/syn-partners",
+   "kind": "url",
+   "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-partners-male-cns-v1.0-minconf-0.5.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "malecns/syn-points",
+   "kind": "url",
+   "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/syn-points-male-cns-v1.0-minconf-0.5.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "malecns/tbar-neurotransmitters",
+   "kind": "url",
+   "url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/tbar-neurotransmitters-male-cns-v1.0.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "flywire783/proofread_root_ids",
+   "kind": "url",
+   "url": "https://zenodo.org/api/records/10676866/files/proofread_root_ids_783.npy/content",
+   "name": "proofread_root_ids_783.npy",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "flywire783/neuropil_count_pre",
+   "kind": "url",
+   "url": "https://zenodo.org/api/records/10676866/files/per_neuron_neuropil_count_pre_783.feather/content",
+   "name": "per_neuron_neuropil_count_pre_783.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "flywire783/neuropil_count_post",
+   "kind": "url",
+   "url": "https://zenodo.org/api/records/10676866/files/per_neuron_neuropil_count_post_783.feather/content",
+   "name": "per_neuron_neuropil_count_post_783.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "flywire783/proofread_connections",
+   "kind": "url",
+   "url": "https://zenodo.org/api/records/10676866/files/proofread_connections_783.feather/content",
+   "name": "proofread_connections_783.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "flywire783/synapses",
+   "kind": "url",
+   "url": "https://zenodo.org/api/records/10676866/files/flywire_synapses_783.feather/content",
+   "name": "flywire_synapses_783.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "banc/meta",
+   "kind": "dataverse",
+   "file_id": 14033740,
+   "name": "banc_888_meta.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/edgelist_simple_v3",
+   "kind": "dataverse",
+   "file_id": 13918810,
+   "name": "banc_888_edgelist_simple_v3.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/edgelist_split_v3",
+   "kind": "dataverse",
+   "file_id": 13992837,
+   "name": "banc_888_edgelist_split_v3.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "banc/nt_prediction_v2",
+   "kind": "dataverse",
+   "file_id": 13916450,
+   "name": "banc_888_neurotransmitter_prediction_v2.csv",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/metrics",
+   "kind": "dataverse",
+   "file_id": 14034271,
+   "name": "banc_888_metrics.feather",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/cell_info",
+   "kind": "dataverse",
+   "file_id": 13916453,
+   "name": "cell_info.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/cell_representative_point",
+   "kind": "dataverse",
+   "file_id": 13916454,
+   "name": "cell_representative_point.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/somas",
+   "kind": "dataverse",
+   "file_id": 13916460,
+   "name": "somas_v1.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/backbone_proofread",
+   "kind": "dataverse",
+   "file_id": 13916445,
+   "name": "backbone_proofread.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/codex_annotations",
+   "kind": "dataverse",
+   "file_id": 13916455,
+   "name": "codex_annotations.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/peripheral_nerves",
+   "kind": "dataverse",
+   "file_id": 13916458,
+   "name": "peripheral_nerves.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/neck_connective_y121000",
+   "kind": "dataverse",
+   "file_id": 13916456,
+   "name": "neck_connective_y121000.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/neck_connective_y92500",
+   "kind": "dataverse",
+   "file_id": 13916457,
+   "name": "neck_connective_y92500.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/neuropil_meshes",
+   "kind": "dataverse",
+   "file_id": 13917708,
+   "name": "banc_neuropil_meshes.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/betweenness_v2",
+   "kind": "dataverse",
+   "file_id": 13916446,
+   "name": "banc_888_betweenness_all_to_all_v2.csv",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/spectral_clustering_v2",
+   "kind": "dataverse",
+   "file_id": 13916447,
+   "name": "banc_888_cns_network_spectral_clustering_v2.csv",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/synapse_review_v3",
+   "kind": "dataverse",
+   "file_id": 14023097,
+   "name": "2026-05-14_aelysia_synapse_sample_complete_v3.csv",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/synapse_evaluation",
+   "kind": "dataverse",
+   "file_id": 13999881,
+   "name": "251013_synapse_evaluation.csv",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/problem_regions",
+   "kind": "dataverse",
+   "file_id": 13916443,
+   "name": "banc_problem_regions.csv",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/nt_ground_truth",
+   "kind": "dataverse",
+   "file_id": 13917726,
+   "name": "banc_nt_ground_truth.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/neuropeptides_archive",
+   "kind": "dataverse",
+   "file_id": 13917714,
+   "name": "drosophila_neuropeptides_archive.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/neurotransmitters_archive",
+   "kind": "dataverse",
+   "file_id": 13917715,
+   "name": "drosophila_neurotransmitters_archive.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/influence_calculator",
+   "kind": "dataverse",
+   "file_id": 13917713,
+   "name": "connectome_influence_calculator_archive.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/supplemental_data",
+   "kind": "dataverse",
+   "file_id": 13917709,
+   "name": "banc_supplemental_data.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/behavior",
+   "kind": "dataverse",
+   "file_id": 13917712,
+   "name": "behavior.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/registration_brain",
+   "kind": "dataverse",
+   "file_id": 13917718,
+   "name": "registration_brain_jrc2018f.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/registration_vnc",
+   "kind": "dataverse",
+   "file_id": 13917719,
+   "name": "registration_vnc_jrc2018vncf.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "banc/synapses_v3_enriched",
+   "kind": "dataverse",
+   "file_id": 13992860,
+   "name": "banc_888_synapses_v3_enriched.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "banc/nt_prediction_v3_per_synapse",
+   "kind": "dataverse",
+   "file_id": 13916491,
+   "name": "banc_nt_prediction_v3_w_sizethresh_10_05042026.parquet",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "banc/swc_skeletons",
+   "kind": "dataverse",
+   "file_id": 13952186,
+   "name": "banc_swc_skeletons.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": false
+  },
+  {
+   "id": "human/h01_104_proofread_swc",
+   "kind": "url",
+   "url": "https://storage.googleapis.com/h01-release/data/20210601/proofread_104/skeletons/104_proofread_neurons_swc.zip",
+   "license": "CC-BY-4.0",
+   "in_repo": true
+  },
+  {
+   "id": "human/tvb_data",
+   "kind": "url",
+   "url": "https://zenodo.org/records/10128131/files/tvb_data.zip?download=1",
+   "name": "tvb_data.zip",
+   "license": "GPL-3.0",
+   "in_repo": true
+  }
+ ]
 }

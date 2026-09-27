@@ -34,6 +34,7 @@ else:
 
 out = ROOT / f"experiments/phase0/results_{VERSION}"
 params["n_run"] = N_RUN
+out.mkdir(parents=True, exist_ok=True)
 t0 = time.time()
 run_exp(exp_name="sugarR", neu_exc=sugar, path_res=str(out), path_comp=str(SHIU / DATA[0]),
         path_con=str(SHIU / DATA[1]), params=params, n_proc=-1)
