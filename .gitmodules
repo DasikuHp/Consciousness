@@ -1,0 +1,63 @@
+[submodule "external/fly/Drosophila_brain_model"]
+	path = external/fly/Drosophila_brain_model
+	url = https://github.com/philshiu/Drosophila_brain_model
+[submodule "external/fly/flywire_annotations"]
+	path = external/fly/flywire_annotations
+	url = https://github.com/flyconnectome/flywire_annotations
+[submodule "external/fly/BANC-project"]
+	path = external/fly/BANC-project
+	url = https://github.com/htem/BANC-project
+[submodule "external/fly/flyvis"]
+	path = external/fly/flyvis
+	url = https://github.com/TuragaLab/flyvis
+[submodule "external/fly/flygym"]
+	path = external/fly/flygym
+	url = https://github.com/NeLy-EPFL/flygym
+[submodule "external/fly/fly-brain-eon"]
+	path = external/fly/fly-brain-eon
+	url = https://github.com/eonsystemspbc/fly-brain
+[submodule "external/fly/drosophila-brain-mlx"]
+	path = external/fly/drosophila-brain-mlx
+	url = https://github.com/Kisame76/drosophila-brain-mlx
+[submodule "external/fly/flybrain-browser"]
+	path = external/fly/flybrain-browser
+	url = https://github.com/snedea/flybrain
+[submodule "external/fly/neuprint-python"]
+	path = external/fly/neuprint-python
+	url = https://github.com/connectome-neuprint/neuprint-python
+[submodule "external/fly/navis"]
+	path = external/fly/navis
+	url = https://github.com/navis-org/navis
+[submodule "external/fly/CAVEclient"]
+	path = external/fly/CAVEclient
+	url = https://github.com/CAVEconnectome/CAVEclient
+[submodule "external/lang/RWKV-LM"]
+	path = external/lang/RWKV-LM
+	url = https://github.com/BlinkDL/RWKV-LM
+[submodule "external/consciousness/pyphi"]
+	path = external/consciousness/pyphi
+	url = https://github.com/wmayner/pyphi
+[submodule "external/consciousness/PCIst"]
+	path = external/consciousness/PCIst
+	url = https://github.com/renzocom/PCIst
+[submodule "external/sim/brian2"]
+	path = external/sim/brian2
+	url = https://github.com/brian-team/brian2
+[submodule "external/sim/nest-simulator"]
+	path = external/sim/nest-simulator
+	url = https://github.com/nest/nest-simulator
+[submodule "external/sim/nrn"]
+	path = external/sim/nrn
+	url = https://github.com/neuronsimulator/nrn
+[submodule "external/sim/arbor"]
+	path = external/sim/arbor
+	url = https://github.com/arbor-sim/arbor
+[submodule "external/sim/nengo"]
+	path = external/sim/nengo
+	url = https://github.com/nengo/nengo
+[submodule "external/sim/nengo-spa"]
+	path = external/sim/nengo-spa
+	url = https://github.com/nengo/nengo-spa
+[submodule "external/sim/libNeuroML"]
+	path = external/sim/libNeuroML
+	url = https://github.com/NeuralEnsemble/libNeuroML
