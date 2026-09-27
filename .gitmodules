@@ -37,6 +37,7 @@
 [submodule "external/consciousness/pyphi"]
 	path = external/consciousness/pyphi
 	url = https://github.com/wmayner/pyphi
+	branch = feature/iit-4.0
 [submodule "external/consciousness/PCIst"]
 	path = external/consciousness/PCIst
 	url = https://github.com/renzocom/PCIst
@@ -61,3 +62,108 @@
 [submodule "external/sim/libNeuroML"]
 	path = external/sim/libNeuroML
 	url = https://github.com/NeuralEnsemble/libNeuroML
+[submodule "external/fly/drosophila_neurotransmitters"]
+	path = external/fly/drosophila_neurotransmitters
+	url = https://github.com/flyconnectome/drosophila_neurotransmitters
+[submodule "external/fly/synister"]
+	path = external/fly/synister
+	url = https://github.com/funkelab/synister
+[submodule "external/fly/larval-drosophila-connectome"]
+	path = external/fly/larval-drosophila-connectome
+	url = https://github.com/brain-networks/larval-drosophila-connectome
+[submodule "external/other/ConnectomeToolbox"]
+	path = external/other/ConnectomeToolbox
+	url = https://github.com/openworm/ConnectomeToolbox
+[submodule "external/other/c302"]
+	path = external/other/c302
+	url = https://github.com/openworm/c302
+[submodule "external/other/BAAIWorm"]
+	path = external/other/BAAIWorm
+	url = https://github.com/Jessie940611/BAAIWorm
+[submodule "external/human/AllenSDK"]
+	path = external/human/AllenSDK
+	url = https://github.com/AllenInstitute/AllenSDK
+[submodule "external/human/human_patchseq_gaba"]
+	path = external/human/human_patchseq_gaba
+	url = https://github.com/AllenInstitute/human_patchseq_gaba
+[submodule "external/human/Human-L2-3-Cortical-Microcircuit"]
+	path = external/human/Human-L2-3-Cortical-Microcircuit
+	url = https://github.com/KantYao/Human-L2-3-Cortical-Microcircuit
+[submodule "external/human/human-multi-area-model"]
+	path = external/human/human-multi-area-model
+	url = https://github.com/INM-6/human-multi-area-model
+[submodule "external/human/tvb-root"]
+	path = external/human/tvb-root
+	url = https://github.com/the-virtual-brain/tvb-root
+[submodule "external/human/tvb-adex-showcase3"]
+	path = external/human/tvb-adex-showcase3
+	url = https://gitlab.ebrains.eu/kancourt/tvb-adex-showcase3-git
+[submodule "external/other/biorealistic-v1-model"]
+	path = external/other/biorealistic-v1-model
+	url = https://github.com/AllenInstitute/biorealistic-v1-model
+[submodule "external/other/bmtk"]
+	path = external/other/bmtk
+	url = https://github.com/AllenInstitute/bmtk
+[submodule "external/other/neurodamus"]
+	path = external/other/neurodamus
+	url = https://github.com/openbraininstitute/neurodamus
+[submodule "external/consciousness/pypci"]
+	path = external/consciousness/pypci
+	url = https://github.com/noreun/pypci
+[submodule "external/consciousness/antropy"]
+	path = external/consciousness/antropy
+	url = https://github.com/raphaelvallat/antropy
+[submodule "external/consciousness/PhiToolbox"]
+	path = external/consciousness/PhiToolbox
+	url = https://github.com/oizumi-lab/PhiToolbox
+[submodule "external/consciousness/integrated-info-decomp"]
+	path = external/consciousness/integrated-info-decomp
+	url = https://github.com/Imperial-MIND-lab/integrated-info-decomp
+[submodule "external/consciousness/jidt"]
+	path = external/consciousness/jidt
+	url = https://github.com/jlizier/jidt
+[submodule "external/consciousness/sleep-stage-transition"]
+	path = external/consciousness/sleep-stage-transition
+	url = https://github.com/bazhlab-ucsd/sleep-stage-transition
+[submodule "external/consciousness/whole-brain-public"]
+	path = external/consciousness/whole-brain-public
+	url = https://github.com/bazhlab-ucsd/whole-brain-public
+[submodule "external/consciousness/ModelDB-267595"]
+	path = external/consciousness/ModelDB-267595
+	url = https://github.com/ModelDBRepository/267595
+[submodule "external/sim/genn"]
+	path = external/sim/genn
+	url = https://github.com/genn-team/genn
+[submodule "external/sim/norse"]
+	path = external/sim/norse
+	url = https://github.com/norse/norse
+[submodule "external/sim/snntorch"]
+	path = external/sim/snntorch
+	url = https://github.com/jeshraghian/snntorch
+[submodule "external/sim/bindsnet"]
+	path = external/sim/bindsnet
+	url = https://github.com/BindsNET/bindsnet
+[submodule "external/sim/BrainPy"]
+	path = external/sim/BrainPy
+	url = https://github.com/brainpy/BrainPy
+[submodule "external/sim/spikingjelly"]
+	path = external/sim/spikingjelly
+	url = https://github.com/fangwei123456/spikingjelly
+[submodule "external/sim/jaxley"]
+	path = external/sim/jaxley
+	url = https://github.com/jaxleyverse/jaxley
+[submodule "external/sim/pyNeuroML"]
+	path = external/sim/pyNeuroML
+	url = https://github.com/NeuroML/pyNeuroML
+[submodule "external/sim/elephant"]
+	path = external/sim/elephant
+	url = https://github.com/NeuralEnsemble/elephant
+[submodule "external/learning/pycma"]
+	path = external/learning/pycma
+	url = https://github.com/CMA-ES/pycma
+[submodule "external/learning/fSBI"]
+	path = external/learning/fSBI
+	url = https://github.com/VogelsLab/fSBI
+[submodule "external/learning/e2l-cgp-snn"]
+	path = external/learning/e2l-cgp-snn
+	url = https://github.com/Happy-Algorithms-League/e2l-cgp-snn
