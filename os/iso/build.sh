@@ -4,7 +4,7 @@
 #                ghcr.io/archlinux/archlinux:latest bash /src/os/iso/build.sh
 set -euo pipefail
 [ -f /ca.crt ] && cp /ca.crt /etc/ca-certificates/trust-source/anchors/proxy.crt && update-ca-trust
-pacman -Syu --noconfirm --needed archiso base-devel cargo jq curl niri >/dev/null
+pacman -Syu --noconfirm --needed archiso grub base-devel cargo jq curl niri >/dev/null
 useradd -m builder
 mkdir -p /home/builder/repo/data && cp -r /src/edi /src/os /src/tools /home/builder/repo/ && rm -rf /home/builder/repo/edi/target
 cp -r /src/data/brain /home/builder/repo/data/ && chown -R builder /home/builder/repo
