@@ -1,0 +1,11 @@
+#!/bin/bash
+# edi-menu — menú de EDI con el mismo estilo que omarchy-menu (walker --dmenu).
+set -euo pipefail
+menu() { printf "%b" "$2" | walker --dmenu --width 320 -p "$1…" 2>/dev/null; }
+choice=$(menu "EDI" "󰋑  Estado\n󰒲  Dormir / despertar\n  Diario de vida\n  Reiniciar núcleo")
+case "$choice" in
+  *Estado*)  notify-send "EDI" "$(edi status)" ;;
+  *Dormir*)  edi toggle ;;
+  *Diario*)  notify-send "EDI · diario" "$(edi log 8)" ;;
+  *Reiniciar*) systemctl --user restart edid ;;
+esac

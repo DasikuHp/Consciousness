@@ -1,0 +1,14 @@
+[package]
+name = "edi-lang"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+edi-brain = { path = "../edi-brain" }
+anyhow.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+rand_distr.workspace = true
+rayon.workspace = true
+serde_json.workspace = true

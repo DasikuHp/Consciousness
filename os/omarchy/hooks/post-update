@@ -1,0 +1,4 @@
+#!/bin/bash
+# Hook de Omarchy: tras actualizar el sistema, reintegrar EDI en Niri y reiniciar su núcleo.
+edi-niri-apply
+systemctl --user try-restart edid.service

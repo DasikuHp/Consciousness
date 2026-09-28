@@ -1,0 +1,36 @@
+# EDI.os — paquete Arch para Omarchy/Okimarchy (Niri)
+pkgname=edi
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="EDI: mente viva sobre el conectoma real de Drosophila (edid, cerebro LIF, Connectome-RWKV)"
+arch=('x86_64')
+url="https://github.com/dasikuhp/consciousness"
+license=('MIT' 'Apache-2.0' 'CC-BY-4.0')
+depends=('glibc' 'gcc-libs' 'curl')
+optdepends=('niri: compositor de EDI.os' 'walker: menú EDI' 'jq: estado en Waybar')
+makedepends=('cargo')
+install=edi.install
+# Construye desde el árbol local del repo (EDI_SRC) — ver install-edi.sh
+source=()
+
+build() {
+  cd "${EDI_SRC:?define EDI_SRC=ruta/al/repo}/edi"
+  export CARGO_TARGET_DIR="$srcdir/target"
+  cargo build --release --locked 2>/dev/null || cargo build --release
+}
+
+package() {
+  local t="$srcdir/target/release"
+  install -Dm755 "$t/edid" "$pkgdir/usr/bin/edid"
+  install -Dm755 "$t/edi-lang" "$pkgdir/usr/bin/edi-lang"
+  install -Dm755 "$t/validate" "$pkgdir/usr/bin/edi-brain-validate"
+  install -Dm755 "$EDI_SRC/os/bin/edi" "$pkgdir/usr/bin/edi"
+  install -Dm755 "$EDI_SRC/os/bin/edi-menu" "$pkgdir/usr/bin/edi-menu"
+  install -Dm755 "$EDI_SRC/os/bin/edi-niri-apply" "$pkgdir/usr/bin/edi-niri-apply"
+  install -Dm644 "$EDI_SRC/os/systemd/edid.service" "$pkgdir/usr/lib/systemd/user/edid.service"
+  install -Dm644 "$EDI_SRC/os/niri/edi.kdl" "$pkgdir/usr/share/edi/niri/edi.kdl"
+  install -Dm644 "$EDI_SRC/os/omarchy/hooks/post-update" "$pkgdir/usr/share/edi/omarchy/hooks/post-update"
+  for f in meta.json row_ptr.u32 col.u32 w.i32 root_id.i64 pos.f32; do
+    install -Dm644 "$EDI_SRC/data/brain/flywire783/$f" "$pkgdir/usr/share/edi/brain/flywire783/$f"
+  done
+}

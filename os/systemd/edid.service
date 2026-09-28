@@ -1,0 +1,26 @@
+[Unit]
+Description=EDI — núcleo vivo (conectoma de Drosophila)
+Documentation=https://github.com/dasikuhp/consciousness
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/edid
+Environment=EDI_BRAIN=/usr/share/edi/brain/flywire783
+Restart=always
+RestartSec=3
+# Homeostasis: EDI nunca compite con el usuario por la máquina
+Nice=10
+CPUWeight=20
+MemoryHigh=2G
+MemoryMax=3G
+IOSchedulingClass=idle
+# Sandbox: solo su estado y su cerebro
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/state/edi
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=graphical-session.target

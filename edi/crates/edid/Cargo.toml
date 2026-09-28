@@ -1,0 +1,10 @@
+[package]
+name = "edid"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+
+[dependencies]
+edi-brain = { path = "../edi-brain" }
+anyhow.workspace = true
+serde_json.workspace = true

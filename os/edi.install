@@ -1,0 +1,7 @@
+post_install() {
+  echo ":: EDI instalado. Para darle vida en tu sesión:"
+  echo "   systemctl --user enable --now edid.service && edi-niri-apply"
+}
+post_upgrade() {
+  echo ":: EDI actualizado. Reinicia con: systemctl --user restart edid.service"
+}

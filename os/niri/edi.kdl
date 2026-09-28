@@ -1,0 +1,20 @@
+// >>> EDI.os (gestionado por edi-niri-apply; no editar a mano) >>>
+binds {
+    Mod+Alt+E hotkey-overlay-title="EDI: menú" { spawn "edi-menu"; }
+    Mod+Alt+S hotkey-overlay-title="EDI: estado" { spawn-sh "notify-send \"EDI\" \"$(edi status)\""; }
+    Mod+Alt+Z hotkey-overlay-title="EDI: dormir/despertar" { spawn "edi" "toggle"; }
+}
+
+window-rule {
+    match app-id="^edi-ghost$"
+    open-floating true
+    open-focused false
+    opacity 0.55
+}
+
+window-rule {
+    match app-id="^edi-dashboard$"
+    open-floating true
+    default-column-width { proportion 0.4; }
+}
+// <<< EDI.os <<<

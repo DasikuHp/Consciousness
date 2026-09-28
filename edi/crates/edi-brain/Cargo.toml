@@ -1,0 +1,16 @@
+[package]
+name = "edi-brain"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "Motor LIF continuo del conectoma de Drosophila para EDI (determinista o estocástico)"
+
+[dependencies]
+anyhow.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+rand_distr.workspace = true
+rayon.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+getrandom.workspace = true

@@ -1,0 +1,23 @@
+#!/bin/bash
+# edi-niri-apply — integra EDI en la configuración Niri de Okimarchy (Omarchy + Niri).
+# Okimarchy genera ~/.config/niri/config.kdl concatenando fuentes fijas
+# (omarchy-niri-config-gen); EDI añade su bloque, idempotente, a windows.kdl.
+set -euo pipefail
+SRC=/usr/share/edi/niri/edi.kdl
+DST="$HOME/.config/niri/windows.kdl"
+[ -f "$SRC" ] || SRC="$(dirname "$0")/../niri/edi.kdl"
+mkdir -p "$(dirname "$DST")"
+touch "$DST"
+sed -i '/^\/\/ >>> EDI.os/,/^\/\/ <<< EDI.os/d' "$DST"
+cat "$SRC" >> "$DST"
+# Hook de Omarchy: reaplicar tras cada actualización
+HOOK="$HOME/.config/omarchy/hooks/post-update"
+if [ -d "$HOME/.config/omarchy/hooks" ] && ! grep -q edi-niri-apply "$HOOK" 2>/dev/null; then
+  printf '#!/bin/bash\nedi-niri-apply\n' >> "$HOOK"; chmod +x "$HOOK"
+fi
+if command -v omarchy-niri-config-gen >/dev/null; then
+  omarchy-niri-config-gen generate
+elif command -v niri >/dev/null; then
+  niri validate -c "$DST" >/dev/null 2>&1 || true
+fi
+echo "EDI integrado en Niri (Mod+Alt+E menú · Mod+Alt+S estado · Mod+Alt+Z dormir)"

@@ -1,0 +1,19 @@
+#!/bin/bash
+# edi — control de EDI desde la terminal, Niri o Waybar.
+set -euo pipefail
+case "${1:-status}" in
+  status)
+    curl -s --max-time 1 127.0.0.1:7077 | jq -r '"\(.name) · edad \(.age_bio_s|floor)s · energía \((.energy*100)|floor)% · sueño \((.sleep_pressure*100)|floor)% · \(if .asleep then "durmiendo" else "despierta" end) · spikes \(.spikes_last_tick)"' 2>/dev/null \
+      || echo "EDI no responde (systemctl --user status edid)"
+    ;;
+  waybar)
+    s=$(curl -s --max-time 1 127.0.0.1:7077 || true)
+    if [ -z "$s" ]; then echo '{"text":"EDI ·","class":"off"}'; exit 0; fi
+    echo "$s" | jq -c '{text: (if .asleep then "EDI 󰒲" else "EDI 󰋑" end), tooltip: "energía \((.energy*100)|floor)% · spikes \(.spikes_last_tick)", class: (if .asleep then "asleep" else "awake" end)}'
+    ;;
+  toggle)
+    if systemctl --user is-active -q edid; then systemctl --user stop edid; else systemctl --user start edid; fi
+    ;;
+  log)   tail -n "${2:-20}" "$HOME/.local/state/edi/events.jsonl" ;;
+  *)     echo "uso: edi [status|waybar|toggle|log N]"; exit 1 ;;
+esac
