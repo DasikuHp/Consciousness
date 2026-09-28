@@ -1,3 +1,7 @@
+>>> Experiment:     sugarR
+    Output file:    /home/user/Consciousness/experiments/phase0/results_783/sugarR.parquet
+    Excited neurons: 20
+    Elapsed time:   376 s
 {
  "version": "783",
  "n_run": 30,
