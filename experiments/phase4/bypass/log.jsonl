@@ -1,0 +1,62 @@
+{"ce_bigram":2.35749274358275,"ce_uniform":3.4339872044851463,"ce_unigram":2.915598224414071,"mode":"bypass","nf":387,"nin":387,"vocab":31}
+{"eval_acc":0.0517241396009922,"eval_ce":3.419905424118042,"gen":0,"heard":"ola. soy edi. hola edi. te oigo","said":" v oovvvvvvo  vvv ovvo  voovv v","train_fit":-3.498077154159546}
+{"eval_acc":0.1982758641242981,"eval_ce":3.1709976196289062,"gen":10,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-3.264986038208008}
+{"eval_acc":0.1982758641242981,"eval_ce":3.0433342456817627,"gen":20,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-3.2054340839385986}
+{"eval_acc":0.1982758641242981,"eval_ce":2.9432756900787354,"gen":30,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-2.817715883255005}
+{"eval_acc":0.1982758641242981,"eval_ce":2.9081130027770996,"gen":40,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-3.013082504272461}
+{"eval_acc":0.1982758641242981,"eval_ce":2.8769564628601074,"gen":50,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-2.9548580646514893}
+{"eval_acc":0.1982758641242981,"eval_ce":2.8399291038513184,"gen":60,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-2.9914462566375732}
+{"eval_acc":0.1982758641242981,"eval_ce":2.7978343963623047,"gen":70,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-2.671968460083008}
+{"eval_acc":0.1982758641242981,"eval_ce":2.774433135986328,"gen":80,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-2.917999505996704}
+{"eval_acc":0.22413793206214905,"eval_ce":2.7732996940612793,"gen":90,"heard":"ola. soy edi. hola edi. te oigo","said":"      o                        ","train_fit":-2.935687303543091}
+{"eval_acc":0.24137930572032928,"eval_ce":2.7821719646453857,"gen":100,"heard":"ola. soy edi. hola edi. te oigo","said":"     ao  aa   a    aa   a  a   ","train_fit":-2.8260128498077393}
+{"eval_acc":0.24137930572032928,"eval_ce":2.7572457790374756,"gen":110,"heard":"ola. soy edi. hola edi. te oigo","said":"     ao  aa   a    aa   a  a   ","train_fit":-2.650184392929077}
+{"eval_acc":0.24137930572032928,"eval_ce":2.7235708236694336,"gen":120,"heard":"ola. soy edi. hola edi. te oigo","said":"     ao  aa   a    aa   a  a   ","train_fit":-2.9211671352386475}
+{"eval_acc":0.24137930572032928,"eval_ce":2.7087504863739014,"gen":130,"heard":"ola. soy edi. hola edi. te oigo","said":"      o                    o   ","train_fit":-2.80884051322937}
+{"eval_acc":0.23275862634181976,"eval_ce":2.6953773498535156,"gen":140,"heard":"ola. soy edi. hola edi. te oigo","said":"      o                    a   ","train_fit":-2.79683780670166}
+{"eval_acc":0.27586206793785095,"eval_ce":2.6979594230651855,"gen":150,"heard":"ola. soy edi. hola edi. te oigo","said":"     ao  aa   ao   aa   a  a   ","train_fit":-2.7841341495513916}
+{"eval_acc":0.27586206793785095,"eval_ce":2.6776866912841797,"gen":160,"heard":"ola. soy edi. hola edi. te oigo","said":"     ao  aa   ao   aa   a  a   ","train_fit":-2.8753738403320312}
+{"eval_acc":0.27586206793785095,"eval_ce":2.659250020980835,"gen":170,"heard":"ola. soy edi. hola edi. te oigo","said":"      o  a     o   a       a   ","train_fit":-2.815739870071411}
+{"eval_acc":0.24137930572032928,"eval_ce":2.6385412216186523,"gen":180,"heard":"ola. soy edi. hola edi. te oigo","said":"      o  a                 a   ","train_fit":-2.5909483432769775}
+{"eval_acc":0.23275862634181976,"eval_ce":2.6510496139526367,"gen":190,"heard":"ola. soy edi. hola edi. te oigo","said":"      o  a                 a   ","train_fit":-2.7550296783447266}
+{"eval_acc":0.26724138855934143,"eval_ce":2.6504268646240234,"gen":200,"heard":"ola. soy edi. hola edi. te oigo","said":"      o  o     o   o       o   ","train_fit":-2.7622604370117188}
+{"eval_acc":0.26724138855934143,"eval_ce":2.6279561519622803,"gen":210,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  o     o   o       o   ","train_fit":-2.7485952377319336}
+{"eval_acc":0.26724138855934143,"eval_ce":2.612884759902954,"gen":220,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  o     o   o       o   ","train_fit":-2.828742027282715}
+{"eval_acc":0.2931034564971924,"eval_ce":2.605759382247925,"gen":230,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     o   o       o   ","train_fit":-2.7413294315338135}
+{"eval_acc":0.2931034564971924,"eval_ce":2.608088970184326,"gen":240,"heard":"ola. soy edi. hola edi. te oigo","said":"      o  e     o   e       e   ","train_fit":-2.8052196502685547}
+{"eval_acc":0.2931034564971924,"eval_ce":2.610302448272705,"gen":250,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     o   e       e   ","train_fit":-2.8541109561920166}
+{"eval_acc":0.2844827473163605,"eval_ce":2.612805128097534,"gen":260,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     o   e       e   ","train_fit":-2.862053871154785}
+{"eval_acc":0.2586206793785095,"eval_ce":2.61559796333313,"gen":270,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  a     e   a       a   ","train_fit":-2.7340147495269775}
+{"eval_acc":0.27586206793785095,"eval_ce":2.59907865524292,"gen":280,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  a     o   a       a   ","train_fit":-2.459663152694702}
+{"eval_acc":0.26724138855934143,"eval_ce":2.582775831222534,"gen":290,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  a     o   a     a a   ","train_fit":-2.708751678466797}
+{"eval_acc":0.2844827473163605,"eval_ce":2.582709789276123,"gen":300,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     o   e       e   ","train_fit":-2.673182487487793}
+{"eval_acc":0.27586206793785095,"eval_ce":2.5871312618255615,"gen":310,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  a     o   a       a   ","train_fit":-2.675023078918457}
+{"eval_acc":0.27586206793785095,"eval_ce":2.58689546585083,"gen":320,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  a     o   a       a   ","train_fit":-2.8891046047210693}
+{"eval_acc":0.2844827473163605,"eval_ce":2.5712625980377197,"gen":330,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  a     o   a       a   ","train_fit":-2.4941561222076416}
+{"eval_acc":0.25,"eval_ce":2.5772838592529297,"gen":340,"heard":"ola. soy edi. hola edi. te oigo","said":"o        e     e   e       e   ","train_fit":-2.7611610889434814}
+{"eval_acc":0.2931034564971924,"eval_ce":2.564767837524414,"gen":350,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     o   e       e   ","train_fit":-2.8644416332244873}
+{"eval_acc":0.2931034564971924,"eval_ce":2.5583667755126953,"gen":360,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     o   e       e   ","train_fit":-2.6223556995391846}
+{"eval_acc":0.3017241358757019,"eval_ce":2.5475072860717773,"gen":370,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    eo   e    ee e   ","train_fit":-2.6742799282073975}
+{"eval_acc":0.2844827473163605,"eval_ce":2.538590908050537,"gen":380,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    ee   e    ee e   ","train_fit":-2.6025142669677734}
+{"eval_acc":0.2844827473163605,"eval_ce":2.5409302711486816,"gen":390,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    ee   e    ee e   ","train_fit":-2.9780616760253906}
+{"eval_acc":0.27586206793785095,"eval_ce":2.5310399532318115,"gen":400,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    ee   e    ee ee  ","train_fit":-2.5822412967681885}
+{"eval_acc":0.2844827473163605,"eval_ce":2.5367302894592285,"gen":410,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    ee   e    ee ee  ","train_fit":-2.6960017681121826}
+{"eval_acc":0.2844827473163605,"eval_ce":2.5301527976989746,"gen":420,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    ee   e    ee e   ","train_fit":-2.4291884899139404}
+{"eval_acc":0.2844827473163605,"eval_ce":2.5219998359680176,"gen":430,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    ee   e    ee e   ","train_fit":-2.188542604446411}
+{"eval_acc":0.2844827473163605,"eval_ce":2.5250394344329834,"gen":440,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    ee   e    ee e   ","train_fit":-2.6493027210235596}
+{"eval_acc":0.3103448152542114,"eval_ce":2.525172710418701,"gen":450,"heard":"ola. soy edi. hola edi. te oigo","said":"o    oo  e    oo   e    oe e   ","train_fit":-2.6890151500701904}
+{"eval_acc":0.2844827473163605,"eval_ce":2.530313014984131,"gen":460,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  ee   ee   ee   ee ee  ","train_fit":-2.5947349071502686}
+{"eval_acc":0.3103448152542114,"eval_ce":2.516420841217041,"gen":470,"heard":"ola. soy edi. hola edi. te oigo","said":"o    oo  ee   oo   ee   oe e   ","train_fit":-2.312864065170288}
+{"eval_acc":0.3103448152542114,"eval_ce":2.517224073410034,"gen":480,"heard":"ola. soy edi. hola edi. te oigo","said":"o    oo  e    oo   e    oe e   ","train_fit":-2.544246196746826}
+{"eval_acc":0.27586206793785095,"eval_ce":2.51668381690979,"gen":490,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     e   e       e   ","train_fit":-2.6200482845306396}
+{"eval_acc":0.2931034564971924,"eval_ce":2.517099380493164,"gen":500,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     o   a       e   ","train_fit":-2.4797463417053223}
+{"eval_acc":0.2931034564971924,"eval_ce":2.507187843322754,"gen":510,"heard":"ola. soy edi. hola edi. te oigo","said":"o    oo  e    oo   o    o  e   ","train_fit":-2.848444938659668}
+{"eval_acc":0.2931034564971924,"eval_ce":2.513857364654541,"gen":520,"heard":"ola. soy edi. hola edi. te oigo","said":"o    oo  es   oo   ss   o  e   ","train_fit":-2.868574380874634}
+{"eval_acc":0.31896552443504333,"eval_ce":2.507183790206909,"gen":530,"heard":"ola. soy edi. hola edi. te oigo","said":"o    oo  ea   oo   oa   oa e  o","train_fit":-2.7318239212036133}
+{"eval_acc":0.3017241358757019,"eval_ce":2.5159502029418945,"gen":540,"heard":"ola. soy edi. hola edi. te oigo","said":"o    oo  e    oo   e    o  e   ","train_fit":-2.647382974624634}
+{"eval_acc":0.3017241358757019,"eval_ce":2.5105791091918945,"gen":550,"heard":"ola. soy edi. hola edi. te oigo","said":"o    oo  ea   oo   oa   oa a   ","train_fit":-2.352400064468384}
+{"eval_acc":0.2931034564971924,"eval_ce":2.500089168548584,"gen":560,"heard":"ola. soy edi. hola edi. te oigo","said":"o     o  e     o   e       e   ","train_fit":-2.6222589015960693}
+{"eval_acc":0.3017241358757019,"eval_ce":2.500380516052246,"gen":570,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    eo   e    ea e   ","train_fit":-2.7509870529174805}
+{"eval_acc":0.31896552443504333,"eval_ce":2.4960012435913086,"gen":580,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    eo   e    ee ee o","train_fit":-2.6547648906707764}
+{"eval_acc":0.2931034564971924,"eval_ce":2.476128101348877,"gen":590,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    eo   e    ee ee  ","train_fit":-2.6586592197418213}
+{"eval_acc":0.2844827473163605,"eval_ce":2.4766461849212646,"gen":599,"heard":"ola. soy edi. hola edi. te oigo","said":"o    eo  e    eo   e    e  e   ","train_fit":-2.2999026775360107}
