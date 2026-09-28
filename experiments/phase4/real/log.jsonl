@@ -1,4 +1,2 @@
 {"ce_bigram":2.35749274358275,"ce_uniform":3.4339872044851463,"ce_unigram":2.915598224414071,"mode":"real","nf":2598,"nin":387,"vocab":31}
-{"eval_acc":0.043103449046611786,"eval_ce":3.4046828746795654,"gen":0,"heard":"ola. soy edi. hola edi. te oigo","said":"¿¿oo¿l  o o¿eo ¿otel¿o¿¿ltel¿a¿","train_fit":-3.4407589435577393}
-{"eval_acc":0.1982758641242981,"eval_ce":3.341536521911621,"gen":10,"heard":"ola. soy edi. hola edi. te oigo","said":"           o   o           o   ","train_fit":-3.198805093765259}
-{"eval_acc":0.1465517282485962,"eval_ce":3.6811351776123047,"gen":20,"heard":"ola. soy edi. hola edi. te oigo","said":"s   n n e  oe ns?sossos s?o s o","train_fit":-3.2244527339935303}
+{"eval_acc":0.0258620698004961,"eval_ce":3.4286575317382812,"gen":0,"heard":"ola. soy edi. hola edi. te oigo","said":",,oeóóo,oóol,o óóo,ó,o,,ó,eóe ó","train_fit":-3.438723564147949}

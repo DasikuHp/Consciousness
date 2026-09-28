@@ -1,0 +1,32 @@
+{"ce_bigram":2.35749274358275,"ce_uniform":3.4339872044851463,"ce_unigram":2.915598224414071,"mode":"real","nf":2598,"nin":387,"vocab":31}
+{"eval_acc":0.043103449046611786,"eval_ce":3.4046828746795654,"gen":0,"heard":"ola. soy edi. hola edi. te oigo","said":"¿¿oo¿l  o o¿eo ¿otel¿o¿¿ltel¿a¿","train_fit":-3.4407589435577393}
+{"eval_acc":0.1982758641242981,"eval_ce":3.341536521911621,"gen":10,"heard":"ola. soy edi. hola edi. te oigo","said":"           o   o           o   ","train_fit":-3.198805093765259}
+{"eval_acc":0.1465517282485962,"eval_ce":3.6811351776123047,"gen":20,"heard":"ola. soy edi. hola edi. te oigo","said":"s   n n e  oe ns?sossos s?o s o","train_fit":-3.2244527339935303}
+{"eval_acc":0.1034482792019844,"eval_ce":4.782402038574219,"gen":30,"heard":"ola. soy edi. hola edi. te oigo","said":"ree enee een rn?rs sr s r?srss?","train_fit":-4.647520065307617}
+{"eval_acc":0.06034482643008232,"eval_ce":5.752376556396484,"gen":40,"heard":"ola. soy edi. hola edi. te oigo","said":"re?r inrnenrn  r¿r¿irsr hrsro  ","train_fit":-6.7684478759765625}
+{"eval_acc":0.06896551698446274,"eval_ce":5.88997745513916,"gen":50,"heard":"ola. soy edi. hola edi. te oigo","said":"lie y n nr .yn.ye? .rse. éyr eh","train_fit":-6.191747665405273}
+{"eval_acc":0.043103449046611786,"eval_ce":7.178328514099121,"gen":60,"heard":"ola. soy edi. hola edi. te oigo","said":"li.n.yn.n...yn.yloyy yéle.s y..","train_fit":-7.295567035675049}
+{"eval_acc":0.043103449046611786,"eval_ce":7.677308082580566,"gen":70,"heard":"ola. soy edi. hola edi. te oigo","said":"qtiny.n .. .y.st  iú yé.e t y.h","train_fit":-8.231252670288086}
+{"eval_acc":0.1034482792019844,"eval_ce":7.942486763000488,"gen":80,"heard":"ola. soy edi. hola edi. te oigo","said":"qsent nuúu tui s   set  unu en ","train_fit":-8.342270851135254}
+{"eval_acc":0.1034482792019844,"eval_ce":9.231842994689941,"gen":90,"heard":"ola. soy edi. hola edi. te oigo","said":"tsell n  i   s  e u y .t  s  eh","train_fit":-9.263152122497559}
+{"eval_acc":0.13793103396892548,"eval_ce":10.612541198730469,"gen":100,"heard":"ola. soy edi. hola edi. te oigo","said":"tseiy    u   s ie s   . u s e h","train_fit":-8.0880126953125}
+{"eval_acc":0.12068965286016464,"eval_ce":10.670282363891602,"gen":110,"heard":"ola. soy edi. hola edi. te oigo","said":"l e e   nu   i   u    .  s   .s","train_fit":-10.66426944732666}
+{"eval_acc":0.1034482792019844,"eval_ce":10.417320251464844,"gen":120,"heard":"ola. soy edi. hola edi. te oigo","said":"nse e   ny  n    iuie sih   snh","train_fit":-11.311633110046387}
+{"eval_acc":0.06896551698446274,"eval_ce":11.211721420288086,"gen":130,"heard":"ola. soy edi. hola edi. te oigo","said":"nslee e uuyeno ? uu  u eh s soh","train_fit":-12.196552276611328}
+{"eval_acc":0.07758620381355286,"eval_ce":10.931451797485352,"gen":140,"heard":"ola. soy edi. hola edi. te oigo","said":"qseiy nnay     ueiuce s  ey ee.","train_fit":-11.39168643951416}
+{"eval_acc":0.07758620381355286,"eval_ce":11.154520034790039,"gen":150,"heard":"ola. soy edi. hola edi. te oigo","said":"ísess  e.ue e  sevusuee e sq uh","train_fit":-11.099959373474121}
+{"eval_acc":0.07758620381355286,"eval_ce":11.072510719299316,"gen":160,"heard":"ola. soy edi. hola edi. te oigo","said":"cdiv cccuiccc  ? iucegs  use c,","train_fit":-11.979548454284668}
+{"eval_acc":0.09482758492231369,"eval_ce":12.252044677734375,"gen":170,"heard":"ola. soy edi. hola edi. te oigo","said":"tcii cc uiccdg rduic cu   id c,","train_fit":-13.850926399230957}
+{"eval_acc":0.07758620381355286,"eval_ce":12.388809204101562,"gen":180,"heard":"ola. soy edi. hola edi. te oigo","said":"dvi.   uui u deiuvuiguu crhu u ","train_fit":-12.533928871154785}
+{"eval_acc":0.07758620381355286,"eval_ce":11.946200370788574,"gen":190,"heard":"ola. soy edi. hola edi. te oigo","said":"edeiíu daidcevireeuc yc  hoeuuh","train_fit":-12.33954906463623}
+{"eval_acc":0.07758620381355286,"eval_ce":13.246849060058594,"gen":200,"heard":"ola. soy edi. hola edi. te oigo","said":"edlig e  secee gdhieeybsegcesre","train_fit":-11.634769439697266}
+{"eval_acc":0.12068965286016464,"eval_ce":12.666154861450195,"gen":210,"heard":"ola. soy edi. hola edi. te oigo","said":"edei e euygceri euuerc    g ic ","train_fit":-15.961971282958984}
+{"eval_acc":0.1465517282485962,"eval_ce":14.446477890014648,"gen":220,"heard":"ola. soy edi. hola edi. te oigo","said":"e  il e íy ri eie i  g  eguige ","train_fit":-14.315296173095703}
+{"eval_acc":0.11206896603107452,"eval_ce":14.413196563720703,"gen":230,"heard":"ola. soy edi. hola edi. te oigo","said":"eseiér   y uiri   ie i ingu  e ","train_fit":-13.550604820251465}
+{"eval_acc":0.1034482792019844,"eval_ce":14.634451866149902,"gen":240,"heard":"ola. soy edi. hola edi. te oigo","said":"esí s    u    ts ré,  i  si    ","train_fit":-16.498619079589844}
+{"eval_acc":0.13793103396892548,"eval_ce":13.772965431213379,"gen":250,"heard":"ola. soy edi. hola edi. te oigo","said":"qs t   rcd   r    éi eo  r  u  ","train_fit":-14.029876708984375}
+{"eval_acc":0.08620689809322357,"eval_ce":14.444299697875977,"gen":260,"heard":"ola. soy edi. hola edi. te oigo","said":"e   i e cur is  e  r sioe é e  ","train_fit":-17.50588035583496}
+{"eval_acc":0.07758620381355286,"eval_ce":14.623374938964844,"gen":270,"heard":"ola. soy edi. hola edi. te oigo","said":"t nié  e u  i  r éi   ei ú e o ","train_fit":-15.776233673095703}
+{"eval_acc":0.12068965286016464,"eval_ce":15.920982360839844,"gen":280,"heard":"ola. soy edi. hola edi. te oigo","said":"t vir   átnti ú r isrrué  t  on","train_fit":-13.65494441986084}
+{"eval_acc":0.12068965286016464,"eval_ce":15.443733215332031,"gen":290,"heard":"ola. soy edi. hola edi. te oigo","said":"ttv.í.úr.nt nt é itnrrct s otoe","train_fit":-16.087177276611328}
+{"eval_acc":0.08620689809322357,"eval_ce":18.27716827392578,"gen":299,"heard":"ola. soy edi. hola edi. te oigo","said":"ttvi  r .ncoús rot. rrtúoystoos","train_fit":-17.174161911010742}

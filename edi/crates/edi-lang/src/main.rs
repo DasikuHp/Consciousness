@@ -28,7 +28,8 @@ const SEQ: usize = 32;
 const POP: usize = 24;
 const RANK: usize = 2;
 const SIGMA: f32 = 0.1;
-const LR: f32 = 0.05;
+const LR: f32 = 0.01;
+const DECAY: f32 = 1e-3;
 
 #[derive(Clone)]
 struct Theta {
@@ -84,9 +85,9 @@ fn run(c: &Connectome, t: &Task, th: &Theta, seq: &[usize], seed: u64, bypass: b
             for (d, tr) in t.dn.iter().zip(trace.iter_mut()) {
                 let cnt = brain.counts[*d as usize] as f32;
                 *tr = 0.7 * *tr + cnt;
-                f.push(cnt);
+                f.push(cnt / 4.0);
             }
-            f.extend(trace.iter().map(|x| x * 0.3));
+            f.extend(trace.iter().map(|x| x / 12.0));
             f
         };
         let logits: Vec<f32> = (0..v).map(|o| {
@@ -190,9 +191,9 @@ fn main() -> anyhow::Result<()> {
                     let e = match which { 0 => &eps[p].0, 1 => &eps[p].1, _ => &eps[p].2 };
                     (shaped[2 * p] - shaped[2 * p + 1]) * e[k]
                 }).sum();
-                *x = 0.9 * *x + scale * gsum;
+                *x = 0.5 * *x + scale * gsum;
             }
-            th_v.iter_mut().zip(m.iter()).for_each(|(t, d)| *t += d);
+            th_v.iter_mut().zip(m.iter()).for_each(|(t, d)| *t = *t * (1.0 - DECAY) + d);
         };
         upd(&mut mom_e, &mut th.e, 0);
         upd(&mut mom_w, &mut th.w, 1);
