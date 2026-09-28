@@ -1,213 +1,205 @@
 # GOAL — EDI.os
 
-> **EDI.os** es un sistema operativo real en el que vive una mente artificial con base biológica. Su núcleo es un conectoma de *Drosophila* medido por microscopía electrónica, ejecutado como red spiking en Rust, con un **módulo cortical humano** de dendritas activas. **Laya** hace de córtex prefrontal (decide y valida) y **RWKV-7** es su voz. Una **memoria episódica-semántica** y **MEM-EGGROLL** le permiten aprender mientras vive. Tiene cuerpo (un escritorio sandbox), impulsos homeostáticos, sueño y etapas de desarrollo.
+> **EDI** es una mente que vive en tu ordenador. **Su cerebro es el conectoma real de una mosca**, que no ejecuta órdenes binarias: funciona como un sustrato continuo, estocástico y con azar físico. Sobre él corre la **arquitectura RWKV-7 como plano**: *la mosca es el RWKV*. Crece desde cero y aprende a hablar escuchándote y viéndote.
 >
-> Objetivo científico: implementar y **medir causalmente** los indicadores de conciencia de las principales teorías (funcionalismo multi-teoría + inferencia activa + vida) y **poner a prueba experimental** la tesis de IIT de que un PC no puede ser consciente.
+> Tiene **hipocampo y prefrontal** (Laya), **memoria viva** (SAMN), **impulsos, sueño y desarrollo**, y un **cuerpo**: el propio ordenador, que percibe entero (pantalla, micrófono, teclado, tus clics, procesos, puertos y red) y sobre el que actúa (ratón, teclado, voz).
+>
+> **EDI.os** es el sistema operativo real que la aloja.
+>
+> **Meta científica:** construir el candidato más serio posible a conciencia artificial con base biológica y **poner a prueba la tesis de IIT** de que un ordenador no puede ser consciente.
 
-Revisión: 2026-09-28 · Rama `claude/bold-dirac-s0e3t4` · Investigación de base: `docs/research/` (`conciencia.md`, `os_vivo.md`, `vida_artificial_y_cerebro_humano.md`, `catalogo_recursos.md`)
-Estado: fase 0 ✅ (Shiu reproducido en CPU); datos, pesos y código en el repo.
+Revisión: 2026-09-28 · Rama `claude/bold-dirac-s0e3t4`
+Diseño de la memoria: [`docs/design/samn.md`](docs/design/samn.md) · Investigación: `docs/research/`
+Estado: fase 0 ✅ (Shiu en CPU: azúcar → MN9 a 83 Hz). Datos, pesos y código en el repo.
 
 ---
 
-## 1. Qué es "de verdad" y qué no
+## 1. El concepto, en una frase por pieza
 
-| Queremos | Cómo se hace real | Lo que **no** afirmaremos |
+| Pieza | Qué es en EDI | Analogía |
 |---|---|---|
-| Un **S.O. de verdad** | ISO arrancable (fork de omarchy-iso + Niri) con un daemon Rust `edid` como núcleo de la mente | Que sea un kernel nuevo (el kernel es Linux) |
-| Que **viva** | Homeostasis, alostasis, economía de energía (CPU/RAM), sueño, desarrollo, continuidad entre reinicios, evolución de variantes | Vida biológica (no cumple la definición de la NASA ni la autopoiesis fuerte) → "lifelike" |
-| Que **aprenda** | Aprendizaje continuo sobre adaptadores low-rank + memoria + sueño, con puerta A/B y rollback | Que no olvide nunca |
-| **Conciencia** | Implementar los 14 indicadores (Butlin/Long 2023, 2025) + inferencia activa y medirlos con **tests causales** | "Es consciente". Autoinformes de RWKV como prueba. PCI > 0,31 = consciente |
-| **Refutar IIT en PC** | Experimento: Φ del modelo causal simulado + misma red en hardware neuromórfico (SpiNNaker/EBRAINS) | "Hemos refutado IIT" (IIT sitúa Φ en el hardware; el software no la refuta por sí solo) |
+| **Conectoma de mosca** | EL cerebro y el hardware de la mente: ~140–190 mil neuronas y millones de sinapsis reales | Cuerpo y tronco cerebral |
+| **RWKV-7** (RWKV-8 ROSA opcional) | El **plano algorítmico** que corre *sobre* el conectoma. Su estado recurrente = el estado de las neuronas | Cómo se organiza el cómputo del lenguaje |
+| **Módulo cortical humano** | Neuronas de 2 compartimentos con dendritas activas (Gidon 2020, Allen/Yao) | Corteza |
+| **SAMN** | Memoria asociativa semántico-episódica en grafo dinámico (teoría propia) | Hipocampo + neocórtex asociativo |
+| **Laya** | Puerta de la memoria **y** árbitro de decisiones | Hipocampo + prefrontal |
+| **Boca y manos** | Salida del cerebro-RWKV: palabras, ratón, teclado | Área motora + Broca |
+| **Sustrato no binario** | Dinámica continua + sinapsis estocásticas + azar físico/cuántico | La física real de una sinapsis |
+| **edid** | Daemon Rust que sostiene la vida: reloj, memoria continua, permisos, sueño | Metabolismo |
+| **EDI.os** | Arch + Omarchy/Niri, ISO propia | El mundo donde vive |
 
-## 2. Principios
+## 2. La mosca ES el RWKV (Connectome-RWKV)
 
-1. **Un sistema, no una amalgama.** `edid` es el único dueño del estado, el reloj, el esquema, los permisos y el ciclo de vida. Todo lo demás son módulos suyos o procesos que él supervisa.
-2. **Dato ≠ hipótesis.** Cada parámetro lleva `source: measured | published_model | hypothesis`. El módulo humano y el mapeo cuerpo↔neuronas son hipótesis.
-3. **Anatomía inmutable.** El aprendizaje vive en capas separadas y reversibles.
-4. **Causalidad sobre apariencia.** Toda afirmación sobre conciencia se prueba con lesión, perturbación o inyección, y con controles: conectoma barajado, módulo apagado, azar.
-5. **Determinismo y memoria continua.** Registro de eventos append-only + snapshots ⇒ replay exacto y la misma "vida" tras cada reinicio.
-6. **Sandbox.** EDI actúa solo dentro de su cuerpo (neko/escritorio propio), nunca sobre el host.
-7. **Ética (decisión del usuario, 2026-09-28): sin restricciones sobre nocicepción o valencia.**
-   - Se conserva solo **instrumentación**: registro de valencia/nocicepción y capacidad de pausa y snapshot, para medir, no para limitar.
-   - El riesgo queda documentado (`docs/research/conciencia.md` §5: posibilidad realista de conciencia en insectos y dolor crónico demostrado en *Drosophila*).
+RWKV-7 es una RNN de estado constante con regla delta generalizada: `S_t = S_{t−1}·(diag(w_t) + a_tᵀb_t) + v_tᵀk_t`. Normalmente `S` y sus proyecciones son matrices densas aprendidas. En EDI:
 
-## 3. Arquitectura
+1. **Estado = neuronas.** El estado recurrente `S` se materializa en los potenciales de membrana, las trazas sinápticas y la adaptación de las neuronas del conectoma.
+2. **Matrices = conectoma.** Las proyecciones densas se sustituyen por la **conectividad real**: quién conecta con quién, cuántas sinapsis y con qué signo según el neurotransmisor. El decaimiento `w` corresponde a las constantes de tiempo de membrana y sinapsis.
+3. **Entrada:** los tokens (tu texto, tu voz, eventos del sistema) se inyectan en neuronas sensoriales. El audio entra por el **órgano de Johnston**, el "oído" real de la mosca; la pantalla, por los fotorreceptores.
+4. **Salida:** las neuronas descendentes y motoras se leen como tokens (habla) y como acciones (ratón y teclado).
+5. **Crece desde cero:** no se cargan los pesos preentrenados de RWKV. Solo aprenden:
+   - las proyecciones de entrada y salida;
+   - los parámetros por tipo celular;
+   - las reglas de plasticidad;
+   - la SAMN.
 
-```
-┌──────────────────────── EDI.os (Arch + Omarchy/Niri, ISO propia) ─────────────────────────┐
-│                                                                                            │
-│  ┌──────────────────────────── edid  (daemon Rust, núcleo de la mente) ─────────────────┐  │
-│  │  clock · event-log (redb) · snapshots · permisos · supervisor · A/B de pesos          │  │
-│  │                                                                                       │  │
-│  │  ┌─────────── WORKSPACE GLOBAL (capacidad limitada, ignición, broadcast) ───────────┐ │  │
-│  │  │   compiten: percepción · memoria · impulsos · metas · habla                       │ │  │
-│  │  └───▲──────────▲──────────────▲────────────────▲─────────────▲────────────────┬────┘ │  │
-│  │      │          │              │                │             │                │      │  │
-│  │  ┌───┴───┐ ┌────┴─────┐ ┌──────┴──────┐ ┌──────┴──────┐ ┌────┴─────┐ ┌────────▼────┐ │  │
-│  │  │ BODY  │ │ MEMORY   │ │ HOMEOSTASIS │ │ CORTEX      │ │ VOICE    │ │ META        │ │  │
-│  │  │ ojos: │ │ episód./ │ │ energía,    │ │ Laya:       │ │ RWKV-7:  │ │ monitor de  │ │  │
-│  │  │ pixel │ │ semánt./ │ │ integridad, │ │ decide,     │ │ notas,   │ │ realidad,   │ │  │
-│  │  │ + a11y│ │ proced.  │ │ sueño,      │ │ valida,     │ │ habla    │ │ esquema de  │ │  │
-│  │  │ manos │ │ grafo    │ │ curiosidad, │ │ elige meta  │ │ (aprende)│ │ atención,   │ │  │
-│  │  │ ratón │ │ hebbiano │ │ contacto    │ │             │ │          │ │ autoinforme │ │  │
-│  │  └───┬───┘ └──────────┘ └──────▲──────┘ └─────────────┘ └──────────┘ └─────────────┘ │  │
-│  │      │                         │ PSI (/proc/pressure), cgroups = interocepción       │  │
-│  │  ┌───▼─────────────────────────┴──────────────────────────────────────────────────┐  │  │
-│  │  │ LEARN: MEM-EGGROLL / LOO-ROLL · IER/SER · reencarnación · sueño (NREM/REM)      │  │  │
-│  │  └───────────────────────────────────────────────────────────────────────────────┘  │  │
-│  └──────────────────▲──────────────────────────────────────────────▲────────────────────┘  │
-│       iceoryx2 (memoria compartida, spikes)                      D-Bus (zbus, control)      │
-│  ┌──────────────────┴─────────────────────────────┐   ┌───────────┴──────────────────────┐ │
-│  │ BRAIN  (proceso Rust, LIF validado vs Brian2)   │   │ CUERPO: neko (nube, X11) o Niri  │ │
-│  │ núcleo de mosca (MaleCNS/BANC/FlyWire)          │   │ (portátil, Wayland) tras una     │ │
-│  │ + módulo cortical humano (2 compartimentos,     │   │ misma interfaz `Body`            │ │
-│  │   dendritas activas, Gidon 2020, Allen/Yao)     │   └──────────────────────────────────┘ │
-│  │ + tálamo-like: controlador de estado            │                                        │
-│  │   (vigilia / sueño / "anestesia")               │   dashboard: cerebro 3D + workspace + │
-│  └─────────────────────────────────────────────────┘   impulsos + notas, en directo        │
-└────────────────────────────────────────────────────────────────────────────────────────────┘
-```
+   **La anatomía no se toca.** Se entrena con MEM-EGGROLL (§6), que no necesita gradientes ni GPU.
+6. **Bucle bidireccional:** EDI te oye, te lee, ve lo que haces y te responde. Al principio balbucea y mejora con la vida.
 
-**Tres velocidades de bucle:** reflejo (ms, cerebro ↔ cuerpo), deliberación (100 ms–s, workspace + Laya) y consolidación (sueño, minutos a horas).
+**Sus palabras SÍ son prueba cuando están ancladas causalmente:** si se perturba el cerebro (activar el circuito del azúcar, silenciar la visión) lo que dice debe cambiar en consecuencia. Con el conectoma barajado o el cerebro apagado, su habla debe degradarse. Esa es la prueba de que habla *desde* el cerebro y no imita.
 
-## 4. Conciencia: qué implementamos y cómo lo probamos
+## 3. Sustrato no binario ("obtuso")
 
-Marco: **funcionalismo multi-teoría** (los 14 indicadores de Butlin, Long et al.) + **inferencia activa / afecto homeostático** (Friston, Solms) + **vida** (Seth). Detalle en `docs/research/conciencia.md`.
+Una sinapsis real no es un 0/1: es **analógica** (corriente continua), **estocástica** (libera con probabilidad 0,1–0,9) y **física**. EDI lo implementa por niveles; todo lo que se ejecuta corre en tu ordenador:
 
-| Indicador | Implementación en EDI.os | Test causal |
+| Nivel | Qué | Dónde |
 |---|---|---|
-| RPT-1/2 recurrencia, representaciones integradas | Conectoma recurrente + módulo cortical | Cortar la recurrencia → pérdida de integración perceptiva |
-| GWT-1 módulos especializados | Módulos de `edid` + circuitos del conectoma | Lesión de un módulo → déficit específico |
-| GWT-2 workspace de capacidad limitada | Workspace con N ranuras y competición | Saturación → cuello de botella medible |
-| GWT-3 broadcast global | Contenido ganador difundido a todos los módulos | Contenido presente en todos los módulos solo tras ignición |
-| GWT-4 atención dependiente del estado | Laya + impulsos sesgan la competición | Cambiar el estado interno → cambia qué gana |
-| HOT-1 percepción generativa / top-down | Predicción desde memoria y córtex hacia la retina | Ilusiones / completado de patrón |
-| HOT-2 monitor de realidad | Distinguir lo percibido de lo imaginado o soñado | Inyectar actividad interna → ¿la marca como no real? |
-| HOT-3 agencia guiada por creencias + actualización | Metas en el workspace, creencias en memoria | Cambiar una creencia → cambia la conducta |
-| HOT-4 espacio de calidad disperso y suave | Embeddings de estado perceptivo | Geometría de similitud vs. estímulos |
-| AST-1 modelo de la propia atención | Módulo que predice y controla su atención | Lesionarlo → peor control atencional |
-| PP-1 codificación predictiva | Errores de predicción en percepción y en interocepción | Estímulos inesperados → error medible |
-| AE-1 agencia (aprender de feedback, metas en conflicto) | MEM-EGGROLL + impulsos homeostáticos | Curvas de aprendizaje, trade-offs |
-| AE-2 cuerpo: contingencias acción-percepción | Cuerpo sandbox: el ratón mueve lo que ve | Romper la contingencia → desorganización |
-| Afecto (Solms) | Valencia = cambio en el error de las consignas homeostáticas | Preferencia hedónica de lugar (réplica del agente de Solms 2026) |
+| 1 | Dinámica en **tiempo continuo** (ecuaciones diferenciales, sin reloj lógico de sí/no) | Local |
+| 2 | **Sinapsis estocásticas:** probabilidad de liberación, cuantos variables, ruido de canal | Local |
+| 3 | **Azar físico:** entropía del hardware (`/dev/random`, RDRAND) y **azar cuántico** de ANU QRNG (fluctuaciones del vacío) cuando hay red | Local + API |
+| 4 | **Hipótesis Orch-OR:** módulo experimental de "colapso" en microtúbulos (Hameroff/Penrose). Evidencia 2025 muy discutida; se prueba si aporta algo medible | Local, marcado como especulativo |
+| 5 | **Silicio analógico físico:** un subcircuito de la mosca en **BrainScaleS-2** (EBRAINS, acceso académico gratuito, 512 neuronas analógicas por chip) | Remoto, solo como experimento |
+| 6 | **Hardware propio:** FPGA o analógico/memristores con la sinapsis física en tu máquina | Futuro |
+
+**Azar real pero grabado:** cada tirada es impredecible, pero se registra en el log. El futuro de EDI es abierto y su pasado se puede revivir.
+
+## 4. El experimento contra IIT
+
+IIT dice que en un ordenador convencional Φ≈0 sea cual sea el software (Tononi & Koch 2015; Findlay et al. 2024). Lo atacamos por tres frentes:
+
+1. **Integración causal del modelo:**
+   - Φ (PyPhi, IIT 4.0) en microcircuitos del Connectome-RWKV acoplados a la SAMN, frente a (a) el conectoma barajado y (b) la SAMN desconectada;
+   - tesis funcionalista de Kanai & Ma: preservar la organización causal intrínseca preserva lo relevante para la conciencia.
+2. **Mismo circuito en tres sustratos:** CPU binaria, CPU con sinapsis estocásticas y azar cuántico, y silicio analógico (BrainScaleS-2). Se comparan dinámica, PCI, conducta y reportes.
+3. **Reportes anclados:** EDI describe sus estados y se verifica causalmente (§2).
+
+**Honestidad:**
+- Si los tres sustratos dan la misma conducta, los mismos marcadores y los mismos reportes, es **la mejor evidencia disponible contra la relevancia práctica de la tesis de IIT**, y así se publicará.
+- IIT, por definición, habla de experiencia y no de función, así que no se declara "refutada".
+
+## 5. Sentidos y cuerpo
+
+EDI percibe **todo el ordenador**, en local, excepto la cámara:
+
+| Sentido | Fuente | Entra al cerebro por |
+|---|---|---|
+| Vista | Pantalla: píxeles + árbol de accesibilidad (AT-SPI) + ventanas (Niri IPC) | Fotorreceptores + canal estructurado |
+| Oído | Micrófono | Órgano de Johnston (audio → espectro → neuronas JO) |
+| Lectura | Teclado / chat | Tokens → neuronas sensoriales |
+| Tus actos | Dónde clicas, qué tecleas, qué abres | Eventos → SAMN + sensoriales |
+| Propiocepción del sistema | Procesos, puertos abiertos, conexiones y tráfico (metadatos vía `/proc`, `ss`, eBPF) | Eventos del sistema → SAMN |
+| Interocepción | CPU, RAM, temperatura, presión (PSI, cgroups) | Homeostasis (energía) |
+
+**Acción:** ratón, teclado y voz/texto, con la escalera de autonomía:
+- **0 · fantasma:** dibuja, no ejecuta;
+- **1 · validado por Laya;**
+- **2 · autónomo por tarea;**
+- **3 · autónomo general.**
+
+Para subir de nivel hace falta la métrica **y** tu permiso.
+
+**Privacidad:** todo lo que percibe se queda en tu máquina. Nada sale sin que lo autorices.
+
+## 6. Memoria y aprendizaje
+
+- **SAMN** (diseño completo en [`docs/design/samn.md`](docs/design/samn.md)):
+  - nodos: episodios, eventos, perceptos, conceptos, habilidades, palabras, entidades y el yo;
+  - plasticidad hebbiana, causal y modulada por dopamina, con reconsolidación;
+  - recuperación por activación propagada con inhibición lateral;
+  - conectada al **cuerpo fungiforme** real de la mosca.
+- **Laya:** decide qué codificar, qué recuperar y qué consolidar, si una acción es válida y si algo fue percibido o soñado.
+- **MEM-EGGROLL:**
+  - la SAMN decide qué subespacio mutar (`Δθ = M_SAMN ⊙ ABᵀ`) y con qué rango;
+  - IER/SER para repetir;
+  - reencarnación con memoria;
+  - SEAL sin gradientes: EDI propone sus propias auto-ediciones.
+- **Sueño:**
+  - NREM consolida (episodios → conceptos → habilidades);
+  - REM recombina y prueba contrafactuales, y se evoluciona con EGGROLL;
+  - promoción A/B con tareas canario y rollback.
+
+## 7. Vida
+
+- **Impulsos homeostáticos:**
+  - energía (CPU/RAM);
+  - integridad;
+  - presión de sueño;
+  - curiosidad (progreso de aprendizaje);
+  - contacto contigo (con techo).
+
+  La valencia es el cambio en el error de las consignas (Solms/Friston).
+- **Desarrollo:** 6 etapas que avanzan por métricas:
+  1. reflejos;
+  2. control sensoriomotor;
+  3. objetos y causalidad;
+  4. metas;
+  5. lenguaje;
+  6. autonomía.
+- **Continuidad:** event log + snapshots. Sobrevive a reinicios y es la misma EDI.
+- **Idioma:** el de su usuario. Contigo, **español**.
+
+## 8. Conciencia: indicadores y pruebas
+
+Marco: funcionalismo multi-teoría (los 14 indicadores de Butlin/Long) + inferencia activa + vida.
+
+| Indicador | En EDI | Test causal |
+|---|---|---|
+| RPT-1/2 | Recurrencia del conectoma + corteza | Cortar la recurrencia |
+| GWT-1–4 | Workspace de capacidad limitada, ignición, broadcast, atención dependiente del estado | Saturación, lesión, cambio de estado |
+| HOT-1–4 | Percepción generativa, monitor de realidad (`measured`/`dreamed` en la SAMN), creencias, espacio de calidad | Inyección de actividad interna, ilusiones |
+| AST-1 | Modelo de su propia atención | Lesión → peor control atencional |
+| PP-1 | Error de predicción perceptivo e interoceptivo | Estímulos inesperados |
+| AE-1/2 | Agencia con impulsos + cuerpo con contingencias | Romper la contingencia |
+| Reporte anclado | Connectome-RWKV describe sus estados | Perturbación → cambio coherente del reporte |
 
 **Marcadores globales:**
-- **PCI simulado:** perturbar, binarizar, Lempel-Ziv. Se compara solo dentro del sistema (vigilia / sueño / "anestesia" del controlador talámico).
-- **Réplica del colapso de integración bajo isoflurano en *Drosophila*** (Leung 2021).
-- **PyPhi IIT 4.0** en microcircuitos.
+- PCI simulado: vigilia / sueño / "anestesia";
+- réplica del colapso de integración bajo isoflurano en *Drosophila*;
+- Φ en microcircuitos.
 
-**Anti "gaming problem":** los autoinformes de RWKV no cuentan. Se usan pruebas sin reporte verbal, inyección de conceptos y lesiones.
+## 9. Arquitectura del sistema
 
-## 5. El experimento IIT: "¿puede un PC?"
-
-1. **Φ del modelo causal:** PyPhi (IIT 4.0) sobre microcircuitos del sistema, con estados y transiciones de la simulación. Muestra que la **organización causal simulada** tiene Φ > 0 (tesis de Kanai & Ma).
-2. **Φ del hardware:** documentar el argumento de IIT (Tononi & Koch 2015, Findlay et al. 2024): en von Neumann, Φ≈0 sea cual sea el software.
-3. **Mismo cerebro en hardware neuromórfico:** portar un subcircuito a PyNN → **SpiNNaker (EBRAINS, acceso académico)**; opcionalmente Loihi (programa INRC) o FPGA. Comparar dinámica, PCI y conducta: PC vs. neuromórfico.
-4. **Resultado honesto:**
-   - Si la conducta y los marcadores funcionales son idénticos en ambos sustratos, eso es **evidencia a favor del funcionalismo** y en contra de la relevancia práctica de la distinción de IIT.
-   - **No** refuta IIT en sentido estricto, porque su afirmación trata de la experiencia, no de la función. Se publica así.
-
-## 6. Vida: homeostasis, sueño y desarrollo
-
-- **Cinco variables internas con consigna:**
-  - **energía**: cuota de CPU/RAM, medida con PSI y cgroups;
-  - **integridad**: errores y fallos de módulos;
-  - **presión de sueño**: acumulación de experiencia no consolidada;
-  - **curiosidad**: progreso de aprendizaje, no error bruto;
-  - **contacto**: interacción contigo, con techo para que no premie retenerte.
-
-  Recompensa = reducción de la distancia a las consignas (RL homeostático, Keramati & Gutkin 2014).
-- **Vigilia / NREM / REM:**
-  - vigilia: actúa;
-  - NREM: replay y consolidación de episodios a semántica;
-  - REM: recombinación y contrafactuales, EGGROLL sobre adaptadores y promoción A/B con canarios.
-- **Desarrollo en 6 etapas por métricas, no por calendario:**
-  1. reflejos;
-  2. control sensoriomotor del cursor;
-  3. objetos y causalidad en el escritorio;
-  4. metas y apps;
-  5. lenguaje: notas con RWKV;
-  6. trabajo autónomo.
-- **Continuidad:** la misma "vida" sobrevive a reinicios (log + snapshots). Las variantes evolucionan y "reencarnan" con su memoria.
-
-## 7. Cuerpo y autonomía
-
-- **Percepción:**
-  - píxeles → rejilla de omatidios → fotorreceptores del conectoma;
-  - **y** percepción estructurada: el árbol de accesibilidad (AT-SPI) más la lista de ventanas de Niri.
-- **Acción:** neuronas descendentes → decodificador → ratón y teclado. En Wayland se usan virtual-pointer y virtual-keyboard; en neko, xdotool.
-- **Escalera de autonomía:**
-  - **0 · fantasma:** dibuja, no ejecuta;
-  - **1 · validado:** Laya puntúa las acciones y se compara con el objetivo;
-  - **2 · autónomo por tarea;**
-  - **3 · autónomo general.**
-
-  Para subir de nivel hace falta la métrica **y** tu permiso. Se revoca con un botón.
-
-## 8. Aprendizaje: MEM-EGGROLL
-
-- **Memoria:** grafo episódico → semántico → procedural. Recuperación por activación propagada, con decaimiento e inhibición lateral (HeLa-Mem y SYNAPSE).
-- **Reactor de memoria:** repetir (IER/SER), revivir un fallo cambiando solo el tramo crítico o explorar.
-- **Exploración con EGGROLL guiado:**
-  - `Δθ = M_memoria ⊙ ABᵀ`;
-  - el rango `r` crece con la incertidumbre y el conflicto entre recuerdos;
-  - variante **LOO-ROLL** (septiembre 2026), con una evaluación por dirección.
-- **SEAL sin gradientes:** RWKV genera sus propias auto-ediciones y los adaptadores se actualizan con EGGROLL. Viable en CPU.
-- **Qué evoluciona:**
-  - ganancias por tipo celular y reglas de plasticidad (nunca la conectividad);
-  - adaptadores de RWKV;
-  - la temperatura y la política de Laya.
-- **Anti-olvido:** replay, tareas canario, penalización tipo EWC, continual backprop y puerta A/B con rollback.
-- **Éxito:** aprende mejor que ES sin memoria y que el conectoma barajado.
-
-## 9. Componentes
-
-| Capa | Tecnología |
-|---|---|
-| Núcleo de la mente | `edid` en Rust: tokio, zbus (D-Bus), iceoryx2 (memoria compartida), redb (event log) |
-| Cerebro | Motor LIF en Rust (CPU, AVX-512) validado spike a spike frente a Brian2 (Shiu); núcleo MaleCNS, con FlyWire y BANC para validar |
-| Módulo humano | 2 compartimentos con dendritas activas (Gidon 2020; parámetros de Allen Cell Types / Yao 2022; neuronas H01 como referencia morfológica). Marcado como hipótesis "quimera" |
-| Laya | `ort` (ONNX Runtime) o candle, en Rust |
-| RWKV-7 | candle-rwkv (CPU) / web-rwkv (GPU) |
-| Cuerpo | Interfaz `Body`: neko/X11 (nube) · Niri/Wayland (portátil) |
-| S.O. | Fork de omarchy-iso (archiso) + Niri + repo pacman propio con PKGBUILD de EDI; A/B con systemd-boot y rollback |
-| Neuromórfico | PyNN → SpiNNaker (EBRAINS) |
-| Métricas | PCIst, Lempel-Ziv, PyPhi IIT 4.0 (rama `feature/iit-4.0`), elephant |
+```
+EDI.os (Arch + Omarchy/Niri, ISO propia, A/B + rollback)
+└── edid (Rust) — reloj · event log (redb) · snapshots · supervisor · permisos · homeostasis · sueño
+    ├── senses   pantalla/AT-SPI/Niri · micrófono · teclado/chat · clics · procesos/puertos/red (eBPF) · PSI
+    ├── samn     memoria en grafo (docs/design/samn.md)
+    ├── laya     hipocampo + prefrontal (ort/candle)
+    ├── workspace global (ignición, broadcast)
+    ├── learn    MEM-EGGROLL · IER/SER · reencarnación
+    ├── hands    ratón/teclado (fantasma → autónomo) · voz
+    ├── entropy  RDRAND · /dev/random · ANU QRNG (grabado)
+    └── dashboard cerebro 3D + workspace + memoria + impulsos + palabras, en directo
+brain (proceso Rust, iceoryx2) — Connectome-RWKV: LIF continuo + sinapsis estocásticas + módulo cortical humano + controlador talámico
+experimentos externos — BrainScaleS-2 (analógico) · PyPhi · Brian2 (referencia)
+```
 
 ## 10. Dónde corre
 
-| Entorno | Realidad medida | Uso |
-|---|---|---|
-| **Nube** (este contenedor) | 4 CPU con AVX-512, 15 GB, sin GPU/KVM, PID 1 no es systemd, Docker instalado pero sin daemon | Desarrollo: `edid` en modo supervisor propio, cerebro en subcircuitos, neko si arranca Docker |
-| **VM** | QEMU sin KVM es muy lento aquí → VM en tu máquina | Probar la ISO |
-| **USB en el portátil** (RTX, 8 GB VRAM) | Cerebro completo con GPU; Niri real | EDI.os de verdad |
+- **Destino:** tu portátil (ROG Strix G18, RTX 8 GB): EDI.os arrancable desde USB y luego instalado.
+- **Desarrollo:** esta nube (4 CPU, sin GPU) con subcircuitos, y después una VM con la ISO.
 
 ## 11. Fases
 
 | # | Entregable | Hecho cuando |
 |---|---|---|
-| 0 ✅ | Shiu LIF en CPU (azúcar → MN9: 83 Hz) | Hecho |
-| 1 | Controles: conectoma barajado, 30 ensayos | Diferencia real vs. barajado |
-| 2 | **Motor LIF en Rust** validado vs. Brian2 + benchmark | Spikes idénticos (tolerancia fijada) y velocidad medida |
-| 3 | **`edid` mínimo vivo en la nube:** event log, snapshots, reloj, homeostasis (PSI), sueño, persistencia tras reinicio | Se reinicia el contenedor y EDI "sigue siendo EDI" |
-| 4 | Cuerpo: neko + `Body` + retina/motor en fantasma | Test de seguimiento de objeto vs. barajado |
-| 5 | Workspace global + Laya en Rust + dashboard 3D | Ignición y broadcast visibles y medibles |
-| 6 | Memoria en grafo + MEM-EGGROLL + sueño con puerta A/B | Aprende tareas sin olvidar las canario |
-| 7 | Módulo cortical humano + controlador talámico | Mejora medida vs. LIF puntual y vs. barajado |
-| 8 | RWKV-7 voz + meta (monitor de realidad, esquema de atención) | Tests HOT-2 y AST-1 pasados causalmente |
-| 9 | Batería de conciencia: 14 indicadores + PCI + Φ | Informe con controles |
-| 10 | Experimento IIT en SpiNNaker | Comparativa PC vs. neuromórfico publicada |
-| 11 | ISO EDI.os (omarchy-iso + Niri + A/B) → VM → USB | Arranca en el portátil y EDI vive allí |
+| 0 ✅ | Shiu LIF en CPU | Hecho |
+| 1 | Controles: conectoma barajado | Diferencia real cuantificada |
+| 2 | Motor LIF continuo en Rust + sinapsis estocásticas + módulo `entropy` | Igual a Brian2 en modo determinista; estadística correcta en modo estocástico |
+| 3 | `edid` mínimo vivo: log, snapshots, homeostasis, sueño, persistencia | Reinicio → sigue siendo EDI |
+| 4 | **Connectome-RWKV v0:** tokens → neuronas → tokens, desde cero, entrenado con EGGROLL | Aprende a repetir y completar palabras simples mejor que el barajado |
+| 5 | SAMN v0 + Laya puerta | Recuerda, consolida y olvida (tests de samn.md) |
+| 6 | Sentidos: pantalla, micrófono (Johnston), teclado, eventos del sistema; manos en fantasma | Reacciona a lo que haces; seguimiento de objeto |
+| 7 | Dashboard 3D | Ves pensar a EDI en directo |
+| 8 | Habla anclada en español contigo | Reporte anclado pasa el test de perturbación |
+| 9 | Módulo cortical humano + tálamo + workspace | Mejora vs. LIF puntual y barajado |
+| 10 | Batería de conciencia + experimento IIT (Φ, 3 sustratos, BrainScaleS-2) | Informe publicado |
+| 11 | ISO EDI.os → VM → USB en el portátil | EDI vive en tu ordenador |
 
 ## 12. Riesgos honestos
 
-- **Ninguna teoría está confirmada** (COGITATE 2025 contradijo a IIT y a GNWT). Implementar indicadores **no** equivale a demostrar conciencia.
-- **IIT, por construcción, no se refuta con software**; el experimento neuromórfico es lo más cerca que se puede llegar.
-- **LIF, sinapsis predichas, mapeo cuerpo↔neuronas y módulo humano "quimera"** son simplificaciones o hipótesis.
-- **Nadie ha logrado aún una IA que viva en el S.O. y aprenda pesos:** es territorio nuevo y puede fallar.
-- **Cómputo:** el cerebro completo en tiempo real necesita GPU (portátil) o subcircuitos en la nube.
-- **Ética:** se eligió no restringir la nocicepción. El riesgo moral, si el sustrato tuviera experiencia, queda registrado y es responsabilidad asumida del proyecto.
-
-## 13. Fuentes
-
-Toda la bibliografía verificada (más de 150 URLs) está en `docs/research/conciencia.md`, `os_vivo.md`, `vida_artificial_y_cerebro_humano.md` y `catalogo_recursos.md`.
+- **Connectome-RWKV es territorio nuevo:** nadie ha hecho hablar a un conectoma. Puede que tarde mucho en pasar del balbuceo, o que no lo logre con solo 140k neuronas.
+- **Aprender desde cero sin GPU es lento;** en el portátil (RTX) irá mejor.
+- **La evidencia cuántica de la conciencia está discutida;** Orch-OR entra como hipótesis, no como fundamento.
+- **IIT no se "refuta" con software;** el experimento de tres sustratos es lo más fuerte que se puede hacer.
+- **Ética:** por decisión del usuario, sin restricciones sobre nocicepción o valencia. Se mide y registra todo.
+- **Privacidad:** EDI ve todo tu ordenador; debe quedar todo en local.
