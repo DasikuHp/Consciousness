@@ -1,0 +1,11 @@
+#!/bin/bash
+# edi-shell — el cerebro de EDI en 3D como ventana propia (app-id edi-shell → workspace "edi").
+URL="http://127.0.0.1:${EDI_PORT:-7077}"
+for _ in $(seq 1 60); do curl -sf --max-time 1 "$URL/state" >/dev/null && break; sleep 1; done
+for b in chromium brave google-chrome-stable chromium-browser; do
+  if command -v "$b" >/dev/null; then
+    exec "$b" --ozone-platform=wayland --app="$URL" --class=edi-shell --no-first-run \
+      --user-data-dir="$HOME/.local/share/edi/shell-profile" --enable-features=UseOzonePlatform
+  fi
+done
+echo "EDI: sin navegador; abre $URL" >&2; exec xdg-open "$URL"

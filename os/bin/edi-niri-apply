@@ -7,6 +7,7 @@ SRC=/usr/share/edi/niri/edi.kdl
 DST="$HOME/.config/niri/windows.kdl"
 [ -f "$SRC" ] || SRC="$(dirname "$0")/../niri/edi.kdl"
 mkdir -p "$(dirname "$DST")"
+[ -f "$(dirname "$DST")/edi-mood.kdl" ] || printf 'layout {\n    focus-ring {\n        active-color "#4fd1c5"\n        inactive-color "#16302e"\n    }\n}\n' > "$(dirname "$DST")/edi-mood.kdl"
 touch "$DST"
 sed -i '/^\/\/ >>> EDI.os/,/^\/\/ <<< EDI.os/d' "$DST"
 cat "$SRC" >> "$DST"

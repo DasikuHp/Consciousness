@@ -7,7 +7,7 @@ arch=('x86_64')
 url="https://github.com/dasikuhp/consciousness"
 license=('MIT' 'Apache-2.0' 'CC-BY-4.0')
 depends=('glibc' 'gcc-libs' 'curl')
-optdepends=('niri: compositor de EDI.os' 'walker: menú EDI' 'jq: estado en Waybar')
+optdepends=('chromium: ventana del cerebro 3D (edi-shell)' 'niri: compositor de EDI.os' 'walker: menú EDI' 'jq: estado en Waybar')
 makedepends=('cargo')
 install=edi.install
 # Construye desde el árbol local del repo (EDI_SRC) — ver install-edi.sh
@@ -25,6 +25,7 @@ package() {
   install -Dm755 "$t/edi-lang" "$pkgdir/usr/bin/edi-lang"
   install -Dm755 "$t/validate" "$pkgdir/usr/bin/edi-brain-validate"
   install -Dm755 "$EDI_SRC/os/bin/edi" "$pkgdir/usr/bin/edi"
+  install -Dm755 "$EDI_SRC/os/bin/edi-shell" "$pkgdir/usr/bin/edi-shell"
   install -Dm755 "$EDI_SRC/os/bin/edi-menu" "$pkgdir/usr/bin/edi-menu"
   install -Dm755 "$EDI_SRC/os/bin/edi-niri-apply" "$pkgdir/usr/bin/edi-niri-apply"
   install -Dm644 "$EDI_SRC/os/systemd/edid.service" "$pkgdir/usr/lib/systemd/user/edid.service"

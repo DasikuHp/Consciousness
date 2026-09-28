@@ -1,0 +1,11 @@
+[package]
+name = "edi-samn"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "SAMN: memoria asociativa semántico-episódica en grafo dinámico con activación propagada"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true

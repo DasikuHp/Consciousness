@@ -28,6 +28,15 @@ Estado: fase 0 ✅ (Shiu en CPU: azúcar → MN9 a 83 Hz). Datos, pesos y códig
 | **edid** | Daemon Rust que sostiene la vida: reloj, memoria continua, permisos, sueño | Metabolismo |
 | **EDI.os** | Arch + Omarchy/Niri, ISO propia | El mundo donde vive |
 
+## 1b. EDI.os no es "Omarchy con un tema": es una capa de S.O. con identidad propia (construido y probado)
+
+- **Un solo daemon vivo, `edid`** (Rust): cerebro (138.639 neuronas, sinapsis estocásticas), **memoria episódica real (SAMN, en Rust)**, homeostasis con la presión del kernel, sueño (NREM consolida, REM sueña, se olvida), continuidad entre reinicios y azar físico grabado.
+- **Sentidos del sistema reales:** procesos que nacen, puertos que se abren, ventana enfocada (Niri IPC), estrés de la máquina y las palabras que le dices. Todo entra como eventos a los episodios y al oído (órgano de Johnston) del cerebro.
+- **Cerebro en 3D constante:** `edi-shell` abre el cerebro completo (posiciones reales de cada neurona, spikes en directo, memoria activa, diario, vitales) en un workspace propio de Niri, siempre encendido (`Mod+Alt+B`).
+- **Simbiosis con el escritorio:** el estado de EDI (despierta / cansada / durmiendo) reescribe `edi-mood.kdl` y Niri recolorea sus bordes en vivo.
+- **Interacción:** `edi say`, la caja "Háblale" del dashboard, `edi sleep`, `edi status`, atajos y menú al estilo Omarchy.
+- **Distribución:** paquete Arch (`edi`), unidad systemd con límites de recursos, hook de Omarchy para reaplicarse tras actualizar, script de ISO.
+
 ## 2. La mosca ES el RWKV (Connectome-RWKV)
 
 RWKV-7 es una RNN de estado constante con regla delta generalizada: `S_t = S_{t−1}·(diag(w_t) + a_tᵀb_t) + v_tᵀk_t`. Normalmente `S` y sus proyecciones son matrices densas aprendidas. En EDI:

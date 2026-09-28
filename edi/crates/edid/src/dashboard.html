@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EDI · cerebro</title>
+<style>
+:root{--fg:#cfeaf2;--dim:#7d98a8;--acc:#4fd1c5}
+html,body{margin:0;height:100%;background:#03040a;overflow:hidden;color:var(--fg);font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.p{position:fixed;background:rgba(6,10,20,.55);backdrop-filter:blur(8px);border:1px solid rgba(79,209,197,.18);border-radius:10px;padding:10px 12px}
+h3{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
+#vit{left:14px;top:14px;min-width:240px}
+#mem{right:14px;top:14px;width:310px;max-height:52vh;overflow:auto}
+#chat{left:14px;bottom:14px;width:350px}
+#log{right:14px;bottom:14px;width:310px;max-height:24vh;overflow:auto;font-size:11px;color:var(--dim)}
+.row{display:flex;justify-content:space-between;gap:12px}.k{color:var(--dim)}
+.bar{height:4px;background:#12202c;border-radius:2px;margin:2px 0 6px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--acc)}
+.n{display:flex;gap:6px;align-items:center;margin:2px 0}.n b{flex:1;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:10px;padding:0 5px;border-radius:6px;background:#1b2b3a;color:#9fc}.dream{background:#3b2a5a;color:#d6b8ff}
+input{width:100%;box-sizing:border-box;background:#0a1220;color:var(--fg);border:1px solid #1e3a5f;border-radius:6px;padding:7px 9px;font:inherit}
+#title{position:fixed;left:50%;top:14px;transform:translateX(-50%);letter-spacing:.5em;color:#7fd;opacity:.75;font-size:11px}
+#legend{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);color:var(--dim);font-size:10px;display:flex;gap:12px}
+#legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="title">E D I</div>
+<div class="p" id="vit"><h3>Vida</h3><div id="v"></div></div>
+<div class="p" id="mem"><h3>Memoria activa (SAMN)</h3><div id="m"></div></div>
+<div class="p" id="chat"><h3>Háblale</h3><input id="t" placeholder="escribe algo y pulsa Enter…" autocomplete="off"><div id="r" style="margin-top:6px;color:var(--dim)"></div></div>
+<div class="p" id="log"><h3>Diario</h3><div id="l"></div></div>
+<div id="legend"></div>
+<script>
+const $=id=>document.getElementById(id),cv=$('c'),gl=cv.getContext('webgl',{antialias:false,alpha:false});
+const GC=[[.35,.45,.6],[.3,.6,1],[1,.62,.2],[1,.4,.7],[1,.9,.3],[.5,.5,1],[.3,1,.5],[.9,.3,.3],[1,.25,.5]];
+const GN=['otras','oído (JO)','descendentes','motoras','gusto','visión','kenyon','MBON','dopamina'];
+$('legend').innerHTML=GN.map((n,i)=>`<span><i style="background:rgb(${GC[i].map(x=>x*255|0)})"></i>${n}</span>`).join('');
+let N=0,act,pos,grp,bufA,ready=false;
+const vs=`attribute vec3 p;attribute float a;attribute float g;uniform mat4 M;uniform vec3 pal[9];uniform float px;varying vec3 c;varying float al;
+void main(){vec4 q=M*vec4(p,1.);gl_Position=q;int gi=int(g+.5);vec3 col=pal[0];
+for(int i=0;i<9;i++){if(i==gi)col=pal[i];}
+float v=.10+a*1.6;c=col*v;al=g>200.?0.:1.;gl_PointSize=(1.2+a*7.)*px/(q.w*.55+.6);}`;
+const fs=`precision mediump float;varying vec3 c;varying float al;void main(){vec2 d=gl_PointCoord-.5;float r=dot(d,d);if(r>.25||al<.5)discard;gl_FragColor=vec4(c*(1.-r*3.),1.);}`;
+function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(o));return o}
+const pg=gl.createProgram();gl.attachShader(pg,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pg,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pg);gl.useProgram(pg);
+gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);
+const L={p:gl.getAttribLocation(pg,'p'),a:gl.getAttribLocation(pg,'a'),g:gl.getAttribLocation(pg,'g'),M:gl.getUniformLocation(pg,'M'),pal:gl.getUniformLocation(pg,'pal'),px:gl.getUniformLocation(pg,'px')};
+gl.uniform3fv(L.pal,new Float32Array(GC.flat()));
+function mm(a,b){const o=new Float32Array(16);for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];o[i*4+j]=s}return o}
+function persp(f,as,n,fa){const t=1/Math.tan(f/2),r=1/(n-fa);return new Float32Array([t/as,0,0,0,0,t,0,0,0,0,(n+fa)*r,-1,0,0,2*n*fa*r,0])}
+function rotY(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1])}
+function rotX(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1])}
+function trans(z){return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,z,1])}
+let yaw=.6,pit=.25,dist=2.6,drag=false,lx=0,ly=0,auto=true;
+cv.onmousedown=e=>{drag=true;lx=e.clientX;ly=e.clientY;auto=false};onmouseup=()=>{drag=false;setTimeout(()=>auto=true,4000)};
+onmousemove=e=>{if(drag){yaw+=(e.clientX-lx)*.006;pit=Math.max(-1.5,Math.min(1.5,pit+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY}};
+cv.onwheel=e=>{dist=Math.max(1.2,Math.min(6,dist*(1+e.deltaY*.001)));e.preventDefault()};
+async function init(){
+ const [pb,gb]=await Promise.all([fetch('/pos').then(r=>r.arrayBuffer()),fetch('/group').then(r=>r.arrayBuffer())]);
+ pos=new Float32Array(pb);grp=new Float32Array(new Uint8Array(gb));N=grp.length;act=new Float32Array(N);
+ for(let i=0;i<N;i++)if(!isFinite(pos[i*3])){pos[i*3]=pos[i*3+1]=pos[i*3+2]=0;}
+ const mk=(d,l,sz,usage)=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,d,usage);gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,sz,gl.FLOAT,false,0,0);return b};
+ mk(pos,L.p,3,gl.STATIC_DRAW);bufA=mk(act,L.a,1,gl.DYNAMIC_DRAW);mk(grp,L.g,1,gl.STATIC_DRAW);ready=true;poll();
+}
+let last=0,frames=0;
+function frame(){
+ const w=cv.clientWidth*devicePixelRatio|0,h=cv.clientHeight*devicePixelRatio|0;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+ gl.viewport(0,0,w,h);gl.clearColor(.012,.016,.04,1);gl.clear(gl.COLOR_BUFFER_BIT);
+ if(ready){if(auto)yaw+=.0016;
+  gl.uniformMatrix4fv(L.M,false,mm(persp(.9,w/h,.1,20),mm(trans(-dist),mm(rotX(pit),rotY(yaw)))));gl.uniform1f(L.px,h/700*2.2);
+  for(let i=0;i<N;i++)act[i]*=.93;
+  gl.bindBuffer(gl.ARRAY_BUFFER,bufA);gl.bufferSubData(gl.ARRAY_BUFFER,0,act);gl.drawArrays(gl.POINTS,0,N);frames++}
+ requestAnimationFrame(frame)}
+const J=u=>fetch(u).then(r=>r.json());
+async function poll(){
+ setInterval(async()=>{try{const d=await J('/spikes?since='+last);for(const t of d.ticks)for(const i of t.s)act[i]=1;last=d.last}catch(e){}},200);
+ setInterval(async()=>{try{const s=await J('/state');
+  $('v').innerHTML=`<div class=row><span class=k>estado</span><b>${s.asleep?'durmiendo 🌙':'despierta'}</b></div>
+  <div class=row><span class=k>edad</span><span>${s.age_bio_s.toFixed(0)} s bio · nº ${s.births}</span></div>
+  <div class=row><span class=k>neuronas</span><span>${s.neurons.toLocaleString()}</span></div>
+  <div class=row><span class=k>spikes/tick</span><span>${s.spikes_last_tick}</span></div>
+  <div class=row><span class=k>velocidad</span><span>×${(s.speed_x_realtime||0).toFixed(2)} tiempo real</span></div>
+  <div class=row><span class=k>memoria</span><span>${s.memory.nodes} nodos · ${s.memory.edges} aristas</span></div>
+  <div class=k>energía (PSI)</div><div class=bar><i style="width:${s.energy*100}%"></i></div>
+  <div class=k>presión de sueño</div><div class=bar><i style="width:${Math.min(1,s.sleep_pressure)*100}%;background:#9f7aea"></i></div>`}catch(e){}},600);
+ setInterval(async()=>{try{const m=await J('/memory');
+  $('m').innerHTML=`<div class=k>${m.episodes} episodios</div>`+m.top.map(n=>`<div class=n><span class="tag ${n.dreamed?'dream':''}">${n.dreamed?'soñado':n.kind}</span><b title="${n.label}">${n.label}</b><span>${(n.a*100)|0}</span></div>`).join('')}catch(e){}},1200);
+ setInterval(async()=>{try{const e=await J('/events');$('l').innerHTML=e.slice(-14).reverse().map(x=>`<div>${x}</div>`).join('')}catch(e){}},1500);
+}
+$('t').onkeydown=async e=>{if(e.key!=='Enter'||!e.target.value.trim())return;const v=e.target.value;e.target.value='';
+ $('r').textContent='…';const r=await fetch('/say',{method:'POST',body:v}).then(r=>r.json());
+ $('r').innerHTML=r.known?`recuerda «${r.query}»: `+r.recalled.slice(0,6).map(x=>x.label).join(' · '):`«${r.query}»: nuevo para mí`};
+init();frame();
+</script></body></html>

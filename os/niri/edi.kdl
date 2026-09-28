@@ -1,8 +1,15 @@
 // >>> EDI.os (gestionado por edi-niri-apply; no editar a mano) >>>
-binds {
-    Mod+Alt+E hotkey-overlay-title="EDI: menú" { spawn "edi-menu"; }
-    Mod+Alt+S hotkey-overlay-title="EDI: estado" { spawn-sh "notify-send \"EDI\" \"$(edi status)\""; }
-    Mod+Alt+Z hotkey-overlay-title="EDI: dormir/despertar" { spawn "edi" "toggle"; }
+// El estado de EDI (despierta / cansada / durmiendo) colorea el escritorio: edid reescribe este archivo
+// y Niri lo recarga en vivo.
+include "edi-mood.kdl"
+
+// EDI vive en un workspace propio: su cerebro en 3D, siempre encendido.
+workspace "edi"
+
+window-rule {
+    match app-id="^edi-shell$"
+    open-on-workspace "edi"
+    open-maximized true
 }
 
 window-rule {
@@ -12,9 +19,12 @@ window-rule {
     opacity 0.55
 }
 
-window-rule {
-    match app-id="^edi-dashboard$"
-    open-floating true
-    default-column-width { proportion 0.4; }
+spawn-at-startup "edi-shell"
+
+binds {
+    Mod+Alt+B hotkey-overlay-title="EDI: su cerebro" { focus-workspace "edi"; }
+    Mod+Alt+E hotkey-overlay-title="EDI: menú" { spawn "edi-menu"; }
+    Mod+Alt+S hotkey-overlay-title="EDI: estado" { spawn-sh "notify-send \"EDI\" \"$(edi status)\""; }
+    Mod+Alt+Z hotkey-overlay-title="EDI: dormir" { spawn "edi" "sleep"; }
 }
 // <<< EDI.os <<<

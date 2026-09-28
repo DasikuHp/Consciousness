@@ -14,6 +14,9 @@ case "${1:-status}" in
   toggle)
     if systemctl --user is-active -q edid; then systemctl --user stop edid; else systemctl --user start edid; fi
     ;;
+  say)   shift; curl -s --max-time 5 -X POST --data "$*" 127.0.0.1:7077/say | jq -r 'if .known then "recuerdo «\(.query)»: " + ([.recalled[:6][].label] | join(" · ")) else "«\(.query)»: nuevo para mí" end' ;;
+  sleep) curl -s -X POST 127.0.0.1:7077/sleep >/dev/null && echo "EDI se va a dormir" ;;
+  brain) exec edi-shell ;;
   log)   tail -n "${2:-20}" "$HOME/.local/state/edi/events.jsonl" ;;
-  *)     echo "uso: edi [status|waybar|toggle|log N]"; exit 1 ;;
+  *)     echo "uso: edi [status|say TEXTO|sleep|brain|waybar|toggle|log N]"; exit 1 ;;
 esac
