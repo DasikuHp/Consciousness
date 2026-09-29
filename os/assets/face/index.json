@@ -1,0 +1,122 @@
+{
+ "1": {
+  "file": "01_sarcasmo_seco.png",
+  "name": "sarcasmo_seco"
+ },
+ "2": {
+  "file": "02_aburrimiento_extremo.png",
+  "name": "aburrimiento_extremo"
+ },
+ "3": {
+  "file": "03_curiosidad.png",
+  "name": "curiosidad"
+ },
+ "4": {
+  "file": "04_satisfaccion_ironica.png",
+  "name": "satisfaccion_ironica"
+ },
+ "5": {
+  "file": "05_sospecha.png",
+  "name": "sospecha"
+ },
+ "6": {
+  "file": "06_sorpresa_contenida.png",
+  "name": "sorpresa_contenida"
+ },
+ "7": {
+  "file": "07_enfado_sarcastico.png",
+  "name": "enfado_sarcastico"
+ },
+ "8": {
+  "file": "08_confusion.png",
+  "name": "confusion"
+ },
+ "9": {
+  "file": "09_diversion_maliciosa.png",
+  "name": "diversion_maliciosa"
+ },
+ "10": {
+  "file": "10_sueno_absoluto.png",
+  "name": "sueno_absoluto"
+ },
+ "11": {
+  "file": "11_sarcasmo_seco_b.png",
+  "name": "sarcasmo_seco_b"
+ },
+ "12": {
+  "file": "12_aburrimiento_extremo_b.png",
+  "name": "aburrimiento_extremo_b"
+ },
+ "13": {
+  "file": "13_curiosidad_b.png",
+  "name": "curiosidad_b"
+ },
+ "14": {
+  "file": "14_satisfaccion_ironica_b.png",
+  "name": "satisfaccion_ironica_b"
+ },
+ "15": {
+  "file": "15_sospecha_b.png",
+  "name": "sospecha_b"
+ },
+ "16": {
+  "file": "16_sorpresa_contenida_b.png",
+  "name": "sorpresa_contenida_b"
+ },
+ "17": {
+  "file": "17_enfado_sarcastico_b.png",
+  "name": "enfado_sarcastico_b"
+ },
+ "18": {
+  "file": "18_confusion_b.png",
+  "name": "confusion_b"
+ },
+ "19": {
+  "file": "19_diversion_maliciosa_b.png",
+  "name": "diversion_maliciosa_b"
+ },
+ "20": {
+  "file": "20_somnolencia_absoluta.png",
+  "name": "somnolencia_absoluta"
+ },
+ "21": {
+  "file": "21_orgullo_tranquilo.png",
+  "name": "orgullo_tranquilo"
+ },
+ "22": {
+  "file": "22_desprecio.png",
+  "name": "desprecio"
+ },
+ "23": {
+  "file": "23_interes.png",
+  "name": "interes"
+ },
+ "24": {
+  "file": "24_preocupacion.png",
+  "name": "preocupacion"
+ },
+ "25": {
+  "file": "25_determinacion.png",
+  "name": "determinacion"
+ },
+ "26": {
+  "file": "26_risa_contenida.png",
+  "name": "risa_contenida"
+ },
+ "27": {
+  "file": "27_sorpresa_real.png",
+  "name": "sorpresa_real"
+ },
+ "28": {
+  "file": "28_frustracion.png",
+  "name": "frustracion"
+ },
+ "29": {
+  "file": "29_intriga.png",
+  "name": "intriga"
+ },
+ "30": {
+  "file": "30_cansancio_extremo.png",
+  "name": "cansancio_extremo"
+ }
+}

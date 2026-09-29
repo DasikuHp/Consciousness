@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>EDI</title>
+<style>
+html,body{margin:0;background:transparent;color:#d6ecf3;font:11px/1.45 "JetBrains Mono",ui-monospace,Menlo,monospace;overflow:hidden;user-select:none}
+body.solid{background:#0b1220}
+#card{position:absolute;right:10px;top:10px;width:290px;border:1px solid rgba(120,210,220,.55);border-radius:10px;background:rgba(3,7,14,.82);box-shadow:0 0 22px rgba(79,209,197,.12)}
+#hd{display:flex;align-items:center;gap:8px;padding:7px 10px 3px;letter-spacing:.14em}#hd b{font-weight:500}#hd .sp{flex:1}#hd .sci{letter-spacing:.02em;color:#9bb;font-size:10px}
+#dot{width:8px;height:8px;border-radius:50%;background:#4fd1c5;box-shadow:0 0 8px #4fd1c5}
+#bc{position:relative;height:150px;margin:0 8px;border-top:1px solid rgba(120,210,220,.12)}
+#g{width:100%;height:100%;display:block}
+.lab{position:absolute;font-size:10px;color:#7fe;letter-spacing:.08em}.lab:after{content:"";display:block;height:1px;background:#4fd1c5;opacity:.6}
+#ft{display:flex;align-items:center;gap:8px;padding:4px 10px 8px;border-top:1px solid rgba(120,210,220,.12)}#ft canvas{flex:1;height:18px}#spd{color:#9bb;white-space:nowrap}#nn{color:#4fd1c5;white-space:nowrap;font-size:10px}
+#pet{position:absolute;right:48px;top:252px;width:78px;animation:float 5s ease-in-out infinite}
+#pet img{width:100%;display:block;filter:drop-shadow(0 0 1px #000)}
+#pet:after{content:"";position:absolute;left:8%;right:8%;bottom:-10px;height:10px;border-radius:50%;background:radial-gradient(#4fd1c5aa,transparent 70%)}
+#bub{position:absolute;right:140px;top:262px;max-width:230px;border:1.5px solid #9fe3ec;border-radius:10px;background:rgba(3,7,14,.82);padding:8px 11px;white-space:pre-line;font-size:12px;opacity:0;transition:opacity .4s}
+#bub.on{opacity:1}#bub:after{content:"";position:absolute;right:-9px;top:18px;border:8px solid transparent;border-left-color:#9fe3ec;border-right:0}
+@keyframes float{50%{transform:translateY(-4px)}}
+</style></head><body>
+<div id="card"><div id="hd"><b>EDI</b><span class="sp"></span><span class="sci">D. melanogaster</span><span id="dot"></span></div>
+<div id="bc"><canvas id="g"></canvas><span class="lab" style="left:6px;top:6px">OL</span><span class="lab" style="right:6px;top:6px">CX</span><span class="lab" style="left:6px;bottom:6px">MB</span><span class="lab" style="right:40px;bottom:6px">AL</span></div>
+<div id="ft"><span>spikes</span><canvas id="sp"></canvas><span id="spd">×0.00</span><span id="nn">0 n</span></div></div>
+<div id="bub"></div><div id="pet"><img id="face" alt="EDI"></div>
+<script>
+if(new URLSearchParams(location.search).has('solid'))document.body.classList.add('solid');
+const $=i=>document.getElementById(i),cv=$('g'),gl=cv.getContext('webgl',{alpha:true,premultipliedAlpha:false});
+const RC=[[.42,.5,.66],[.32,.52,1],[.78,.36,1],[1,.58,.18],[.25,.95,.55],[.2,.85,.95],[1,.9,.3],[1,.35,.55]];
+const vs=`attribute vec3 p;attribute float a;attribute float r;uniform mat4 M;uniform vec3 pal[8];uniform float px;varying vec3 c;
+void main(){vec4 q=M*vec4(p,1.);gl_Position=q;int ri=int(r+.5);vec3 col=pal[0];for(int i=0;i<8;i++){if(i==ri)col=pal[i];}
+c=mix(col,vec3(1.),a*.5)*(.12+a*1.6);gl_PointSize=(1.+a*3.5)*px;}`;
+const fs=`precision mediump float;varying vec3 c;void main(){vec2 d=gl_PointCoord-.5;float r=dot(d,d)*4.;if(r>1.)discard;gl_FragColor=vec4(c*exp(-r*2.5),1.);}`;
+const sh=(t,s)=>{const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);return o};
+const pg=gl.createProgram();gl.attachShader(pg,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pg,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pg);gl.useProgram(pg);
+gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);
+const U={M:gl.getUniformLocation(pg,'M'),pal:gl.getUniformLocation(pg,'pal'),px:gl.getUniformLocation(pg,'px')};gl.uniform3fv(U.pal,new Float32Array(RC.flat()));
+let N=0,act,ab,ready=false,last=0,spk=[];
+async function init(){const [pb,rb]=await Promise.all(['/pos','/region'].map(u=>fetch(u).then(r=>r.arrayBuffer())));
+ const pos=new Float32Array(pb),reg=new Float32Array(new Uint8Array(rb));N=reg.length;act=new Float32Array(N);
+ for(let i=0;i<pos.length;i++)if(!isFinite(pos[i]))pos[i]=0;
+ const mk=(d,n,sz,u)=>{const b=gl.createBuffer(),l=gl.getAttribLocation(pg,n);gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,d,u||gl.STATIC_DRAW);gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,sz,gl.FLOAT,false,0,0);return b};
+ mk(pos,'p',3);ab=mk(act,'a',1,gl.DYNAMIC_DRAW);mk(reg,'r',1);ready=true}
+function frame(){const d=devicePixelRatio,w=cv.clientWidth*d|0,h=cv.clientHeight*d|0;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+ gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+ if(ready){for(let i=0;i<N;i++)act[i]*=.9;gl.bindBuffer(gl.ARRAY_BUFFER,ab);gl.bufferSubData(gl.ARRAY_BUFFER,0,act);
+  const s=1.62,as=w/h;gl.uniformMatrix4fv(U.M,false,new Float32Array([s/as,0,0,0,0,s,0,0,0,0,.2,0,0,-.05,0,1]));gl.uniform1f(U.px,d);gl.drawArrays(gl.POINTS,0,N)}
+ requestAnimationFrame(frame)}
+function spark(){const c=$('sp'),d=devicePixelRatio,W=c.clientWidth*d,H=c.clientHeight*d;c.width=W;c.height=H;const g=c.getContext('2d');
+ const mx=Math.max(...spk,1);g.fillStyle='#4fd1c5';spk.forEach((v,i)=>{const bh=v/mx*H;g.fillRect(i*W/40,H-bh,Math.max(1,W/40-1),bh)})}
+const J=u=>fetch(u).then(r=>r.json());let fid=0,fline='';
+setInterval(async()=>{try{const x=await J('/spikes?since='+last);for(const t of x.ticks){for(const i of t.s)act[i]=1;spk.push(t.s.length)}last=x.last;spk=spk.slice(-40);spark()}catch(e){}},200);
+setInterval(async()=>{try{const s=await J('/state');$('spd').textContent='×'+(s.speed_x_realtime||0).toFixed(2);$('nn').textContent=s.neurons.toLocaleString('en')+' n';
+ $('dot').style.background=s.asleep?'#9f7aea':s.energy<.5?'#f6ad55':'#4fd1c5';const f=s.face;if(!f)return;
+ if(f.id!==fid){$('face').src=`/face/${String(f.id).padStart(2,'0')}_${f.name}.png`;fid=f.id}
+ if(f.line!==fline){fline=f.line;const b=$('bub');b.classList.remove('on');setTimeout(()=>{b.textContent=f.line;b.classList.add('on')},250)}}catch(e){}},700);
+init();frame();
+</script></body></html>

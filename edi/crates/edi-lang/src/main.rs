@@ -43,12 +43,13 @@ struct Task {
     vocab: Vec<char>,
     ids: Vec<usize>,
     jo: Vec<u32>,
-    dn: Vec<u32>,
+    ro: Vec<u32>,
 }
 
 impl Task {
+    /// Residual (entrada directa) + estado del cerebro (conteos + traza) de las neuronas de lectura.
     fn nf(&self, bypass: bool) -> usize {
-        if bypass { self.jo.len() } else { 2 * self.dn.len() }
+        if bypass { self.jo.len() } else { self.jo.len() + 2 * self.ro.len() }
     }
 }
 
@@ -65,7 +66,7 @@ fn run(c: &Connectome, t: &Task, th: &Theta, seq: &[usize], seed: u64, bypass: b
     let p = Params { dt: 0.5, ..Params::default() };
     let mut brain = Brain::new(c, p);
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
-    let mut trace = vec![0f32; t.dn.len()];
+    let mut trace = vec![0f32; t.ro.len()];
     let (mut ce, mut hit, mut preds) = (0f32, 0usize, Vec::new());
     let mut prev = seq[0];
     for k in 0..seq.len() - 1 {
@@ -75,21 +76,20 @@ fn run(c: &Connectome, t: &Task, th: &Theta, seq: &[usize], seed: u64, bypass: b
             R_MAX / (1.0 + (-a).exp())
         }).collect();
         prev = x;
-        let feat: Vec<f32> = if bypass {
-            rates.iter().map(|r| r / R_MAX).collect()
-        } else {
+        let mut feat: Vec<f32> = rates.iter().map(|r| r / R_MAX).collect();
+        if !bypass {
             let drive: Vec<(u32, f32)> = t.jo.iter().zip(&rates).map(|(&i, &r)| (i, r)).collect();
             brain.reset_counts();
             brain.run(T_TOK_MS, &drive, &mut rng);
-            let mut f = Vec::with_capacity(nf);
-            for (d, tr) in t.dn.iter().zip(trace.iter_mut()) {
+            let mut tr_part = Vec::with_capacity(t.ro.len());
+            for (d, tr) in t.ro.iter().zip(trace.iter_mut()) {
                 let cnt = brain.counts[*d as usize] as f32;
                 *tr = 0.7 * *tr + cnt;
-                f.push(cnt / 4.0);
+                feat.push(cnt / 4.0);
+                tr_part.push(*tr / 12.0);
             }
-            f.extend(trace.iter().map(|x| x / 12.0));
-            f
-        };
+            feat.extend(tr_part);
+        }
         let logits: Vec<f32> = (0..v).map(|o| {
             th.b[o] + th.w[o * nf..(o + 1) * nf].iter().zip(&feat).map(|(a, b)| a * b).sum::<f32>()
         }).collect();
@@ -117,6 +117,22 @@ fn lowrank(rows: usize, cols: usize, rng: &mut ChaCha8Rng) -> Vec<f32> {
     m
 }
 
+/// Sonda: estimula el oído (JO) 300 ms y elige las N_RO neuronas no-JO más activas:
+/// la vía auditiva real que alcanza la señal en ese conectoma.
+const N_RO: usize = 1024;
+fn probe(c: &Connectome, jo: &[u32]) -> Vec<u32> {
+    let mut b = Brain::new(c, Params { dt: 0.5, ..Params::default() });
+    let mut rng = ChaCha8Rng::seed_from_u64(7);
+    let drive: Vec<(u32, f32)> = jo.iter().map(|&i| (i, 120.0)).collect();
+    b.run(300.0, &drive, &mut rng);
+    let jset: std::collections::HashSet<u32> = jo.iter().cloned().collect();
+    let mut act: Vec<(u32, u32)> = b.counts.iter().enumerate()
+        .filter(|(i, &k)| k > 0 && !jset.contains(&(*i as u32))).map(|(i, &k)| (i as u32, k)).collect();
+    act.sort_by(|a, b| b.1.cmp(&a.1));
+    act.truncate(N_RO);
+    act.into_iter().map(|x| x.0).collect()
+}
+
 fn main() -> anyhow::Result<()> {
     let a: Vec<String> = std::env::args().collect();
     let dir = PathBuf::from(&a[1]);
@@ -134,7 +150,9 @@ fn main() -> anyhow::Result<()> {
     vocab.sort();
     vocab.dedup();
     let ids: Vec<usize> = CORPUS.chars().map(|ch| vocab.binary_search(&ch).unwrap()).collect();
-    let task = Task { vocab, ids, jo: c.group("auditory_jo").to_vec(), dn: c.group("descending").to_vec() };
+    let jo = c.group("auditory_jo").to_vec();
+    let ro = probe(&c, &jo);
+    let task = Task { vocab, ids, jo, ro };
     let (v, nin, nf) = (task.vocab.len(), task.jo.len(), task.nf(bypass));
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     let mut th = Theta {
@@ -158,7 +176,7 @@ fn main() -> anyhow::Result<()> {
         -(row[task.ids[k + 1]] / row.iter().sum::<f64>()).ln()
     }).sum::<f64>() / (n - 1) as f64;
     let mut log = std::fs::File::create(out.join("log.jsonl"))?;
-    writeln!(log, "{}", serde_json::json!({"mode": mode, "vocab": v, "nin": nin, "nf": nf, "ce_unigram": ce_uni, "ce_bigram": ce_bi, "ce_uniform": (v as f64).ln()}))?;
+    writeln!(log, "{}", serde_json::json!({"mode": mode, "vocab": v, "nin": nin, "nf": nf, "n_readout_reached": task.ro.len(), "ce_unigram": ce_uni, "ce_bigram": ce_bi, "ce_uniform": (v as f64).ln()}))?;
     let eval_offsets = [0usize, 60, 130, 200];
     let (mut mom_e, mut mom_w, mut mom_b) = (vec![0f32; v * nin], vec![0f32; v * nf], vec![0f32; v]);
     for g in 0..gens {

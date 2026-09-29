@@ -7,6 +7,7 @@
 //! y su cuerpo en el escritorio (Niri cambia de color con su estado). Sirve el cerebro
 //! en 3D en http://127.0.0.1:7077
 
+mod face;
 mod http;
 mod mood;
 mod senses;
@@ -68,17 +69,18 @@ fn embed(counts: &[u32], dn: &[u32]) -> [f32; EMB] {
 
 fn fnv(s: &str) -> u64 { s.bytes().fold(0xcbf29ce484222325, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3)) }
 
-fn positions(dir: &PathBuf) -> Vec<u8> {
+fn positions(dir: &PathBuf) -> (Vec<u8>, f32) {
     let raw = std::fs::read(dir.join("pos.f32")).unwrap_or_default();
     let v: Vec<f32> = raw.chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().unwrap())).collect();
     let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
     for p in v.chunks_exact(3).filter(|p| p[0].is_finite()) { for k in 0..3 { lo[k] = lo[k].min(p[k]); hi[k] = hi[k].max(p[k]); } }
     let ctr: Vec<f32> = (0..3).map(|k| (lo[k] + hi[k]) / 2.0).collect();
     let sc = (0..3).map(|k| hi[k] - lo[k]).fold(1.0f32, f32::max) / 2.0;
-    v.chunks_exact(3).flat_map(|p| {
+    let bytes = v.chunks_exact(3).flat_map(|p| {
         let q: [f32; 3] = if p[0].is_finite() { [(p[0] - ctr[0]) / sc, -(p[1] - ctr[1]) / sc, (p[2] - ctr[2]) / sc] } else { [f32::NAN; 3] };
         q.into_iter().flat_map(|x| x.to_le_bytes())
-    }).collect()
+    }).collect();
+    (bytes, sc / 1000.0)
 }
 
 fn main() -> Result<()> {
@@ -101,12 +103,29 @@ fn main() -> Result<()> {
     for (gid, name) in [(1u8, "auditory_jo"), (5, "photoreceptor"), (6, "kenyon_cell"), (7, "mbon"), (8, "dan"), (3, "motor"), (4, "sugar_grn"), (2, "descending")] {
         for &i in c.group(name) { group[i as usize] = gid; }
     }
-    let pos = positions(&brain_dir);
+    let (pos, um_per_unit) = positions(&brain_dir);
+    let region: Vec<u8> = std::fs::read(brain_dir.join("region.u8")).ok().filter(|r| r.len() == c.n).unwrap_or(vec![0; c.n]);
+    const RN: [&str; 8] = ["otras", "lóbulo óptico", "cuerpo fungiforme", "complejo central", "lóbulo antenal", "cuerno lateral", "SEZ", "vía auditiva"];
+    let backbone: Vec<u8> = {
+        let valid = |i: usize| f32::from_le_bytes(pos[i * 12..i * 12 + 4].try_into().unwrap()).is_finite();
+        let mut e: Vec<(i32, u32, u32)> = Vec::new();
+        for pre in 0..c.n {
+            if !valid(pre) { continue; }
+            for k in c.row_ptr[pre] as usize..c.row_ptr[pre + 1] as usize {
+                let w = c.w[k].abs();
+                if w >= 12 && valid(c.col[k] as usize) { e.push((w, pre as u32, c.col[k])); }
+            }
+        }
+        e.sort_by(|a, b| b.0.cmp(&a.0));
+        e.truncate(60_000);
+        e.iter().flat_map(|&(_, a, b)| a.to_le_bytes().into_iter().chain(b.to_le_bytes())).collect()
+    };
     for (i, ch) in pos.chunks_exact(12).enumerate() { if f32::from_le_bytes(ch[..4].try_into().unwrap()).is_nan() { group[i] = 255; } }
 
     let sh = Arc::new(Shared {
         state: Mutex::new(serde_json::json!({})), spikes: Mutex::new(VecDeque::new()), samn: Mutex::new(samn),
         events: Mutex::new(VecDeque::new()), inbox: Mutex::new(vec![]), force_sleep: Default::default(), pos, group,
+        region: region.clone(), backbone, activity: Mutex::new(VecDeque::new()), face: Mutex::new(serde_json::json!({})),
     });
     let mut say = |sh: &Shared, t: u64, s: String| {
         let line = serde_json::json!({"t": t, "ev": s});
@@ -129,6 +148,11 @@ fn main() -> Result<()> {
     let (mut ep_start, mut last_event_tick, mut emb_avg) = (0u64, 0u64, [0f32; EMB]);
     let mut ticks_run = 0u64;
     let mut speed = 0.0f64;
+    let mut mood = face::Mood::new(vital.age_ticks);
+    let mut spike_avg = 0f64;
+    let (mut reg_hist, n_reg): (VecDeque<[u32; 8]>, [u32; 8]) = (VecDeque::new(), {
+        let mut k = [0u32; 8]; for &r in &region { k[r as usize % 8] += 1; } k });
+    let mut metrics = serde_json::json!({});
 
     while ticks_run < max_ticks {
         let t0 = Instant::now();
@@ -141,11 +165,12 @@ fn main() -> Result<()> {
         if tk % SENSE_EVERY == 0 {
             let p = senses::procs();
             for n in p.difference(&known_procs).take(4) { new_events.push((format!("PROC:{n}"), 0.0)); }
+            if tk > 200 { if let Some(n) = p.difference(&known_procs).next() { mood.stim(tk, face::Stim::Proc(n.clone())); } }
             known_procs = p;
             let q = senses::ports();
-            for n in q.difference(&known_ports).take(3) { new_events.push((format!("PORT:{n}"), 0.1)); }
+            for n in q.difference(&known_ports).take(3) { new_events.push((format!("PORT:{n}"), 0.1)); mood.stim(tk, face::Stim::Port(*n)); }
             known_ports = q;
-            if let Some(f) = senses::focused() { if f != last_focus { new_events.push((format!("FOCO:{f}"), 0.0)); last_focus = f; } }
+            if let Some(f) = senses::focused() { if f != last_focus { new_events.push((format!("FOCO:{f}"), 0.0)); mood.stim(tk, face::Stim::Focus(f.clone())); last_focus = f; } }
             if vital.energy < 0.5 { new_events.push(("ESTRES:sistema".into(), -0.5)); }
             if niri_ok { let _ = mood::write(&niri_dir, vital.asleep, vital.energy); }
         }
@@ -159,6 +184,14 @@ fn main() -> Result<()> {
                 let set: Vec<(u32, f32)> = (0..24).map(|k| (jo[((h >> 3).wrapping_add(k * 2654435761) as usize) % jo.len()], 150.0)).collect();
                 boosts.push((set, 8));
                 new_events.push((format!("OYE:{w}"), 0.3));
+                let (known, assoc) = {
+                    let mut m = sh.samn.lock().unwrap();
+                    match m.find(edi_samn::Kind::Word, &w) {
+                        Some(id) => { let r = m.recall(&[(id, 1.0)], None); (true, r.iter().skip(1).take(4).map(|(i, _)| m.nodes[*i as usize].label.replace("OYE:", "")).collect()) }
+                        None => (false, vec![]),
+                    }
+                };
+                mood.stim(tk, face::Stim::Word { w: w.clone(), known, assoc });
                 words.push(w);
             }
         }
@@ -184,6 +217,32 @@ fn main() -> Result<()> {
             vital.spikes_last = brain.counts.iter().map(|&x| x as usize).sum();
             vital.sleep_pressure += 1.0 / sleep_after;
             tick_spikes = brain.counts.iter().enumerate().filter(|(_, &c)| c > 0).map(|(i, _)| i as u32).collect();
+            let mut rc = [0u32; 8];
+            for &i in &tick_spikes { rc[region[i as usize] as usize % 8] += brain.counts[i as usize]; }
+            reg_hist.push_back(rc);
+            if reg_hist.len() > 200 { reg_hist.pop_front(); }
+            let sp = vital.spikes_last as f64;
+            if spike_avg > 0.0 && sp > 2.5 * spike_avg + 30.0 {
+                let top = (1..8).max_by_key(|&k| rc[k] * 1000 / n_reg[k].max(1)).unwrap_or(0);
+                mood.stim(tk, face::Stim::BrainBurst(RN[top]));
+            }
+            spike_avg = 0.95 * spike_avg + 0.05 * sp;
+            // métricas: tasa, sinapsis activas, entropía regional, complejidad LZ, sincronía
+            let syn: u64 = tick_spikes.iter().map(|&i| (c.row_ptr[i as usize + 1] - c.row_ptr[i as usize]) as u64).sum();
+            let tot: f64 = rc.iter().map(|&x| x as f64).sum::<f64>().max(1.0);
+            let ent: f64 = rc.iter().filter(|&&x| x > 0).map(|&x| { let p = x as f64 / tot; -p * p.log2() }).sum();
+            let win: Vec<&[u32; 8]> = reg_hist.iter().rev().take(40).collect();
+            let mut bits = String::new();
+            for k in 0..8 {
+                let mean = win.iter().map(|r| r[k] as f64).sum::<f64>() / win.len().max(1) as f64;
+                for r in &win { bits.push(if (r[k] as f64) > mean { '1' } else { '0' }); }
+            }
+            let lz = lz76(bits.as_bytes()) as f64 * (bits.len() as f64).log2() / bits.len().max(1) as f64;
+            let rates: Vec<f64> = (1..8).map(|k| rc[k] as f64 / n_reg[k].max(1) as f64).collect();
+            let mu = rates.iter().sum::<f64>() / 7.0;
+            let sd = (rates.iter().map(|r| (r - mu).powi(2)).sum::<f64>() / 7.0).sqrt();
+            metrics = serde_json::json!({"spikes_s": sp / (TICK_BIO_MS / 1000.0), "active_syn_pct": 100.0 * syn as f64 / c.meta.n_edges as f64,
+                "entropy_bits": ent, "lz": lz, "sync": if mu > 0.0 { 1.0 / (1.0 + sd / mu) } else { 0.0 }});
             let e = embed(&brain.counts, &dn);
             for k in 0..EMB { emb_avg[k] = 0.9 * emb_avg[k] + 0.1 * e[k]; }
             speed = TICK_BIO_MS / (t0.elapsed().as_secs_f64() * 1000.0);
@@ -211,11 +270,18 @@ fn main() -> Result<()> {
         vital.age_ticks += 1;
         ticks_run += 1;
         let (nn, ne) = sh.samn.lock().unwrap().stats();
+        mood.tick(tk, vital.asleep, vital.energy, vital.sleep_pressure, cpu, nn);
+        *sh.face.lock().unwrap() = serde_json::to_value(&mood.face).unwrap();
+        if let Some(rc) = reg_hist.back() {
+            let mut a = sh.activity.lock().unwrap();
+            a.push_back((tk, (0..8).map(|k| rc[k] as f32 / n_reg[k].max(1) as f32).collect()));
+            if a.len() > 200 { a.pop_front(); }
+        }
         *sh.state.lock().unwrap() = serde_json::json!({
             "name": "EDI", "age_bio_s": vital.age_ticks as f64 * TICK_BIO_MS / 1000.0, "births": vital.births,
             "asleep": vital.asleep, "energy": vital.energy, "sleep_pressure": vital.sleep_pressure,
             "spikes_last_tick": vital.spikes_last, "speed_x_realtime": speed, "psi": {"cpu": cpu, "memory": mem},
-            "memory": {"nodes": nn, "edges": ne}, "neurons": c.n,
+            "memory": {"nodes": nn, "edges": ne}, "neurons": c.n, "synapses_edges": c.meta.n_edges, "metrics": metrics, "face": mood.face, "regions": RN, "um_per_unit": um_per_unit,
         });
         if vital.age_ticks % SNAPSHOT_EVERY == 0 { let m = sh.samn.lock().unwrap(); save(&state, &brain, &vital, &m)?; }
         if vital.energy < 0.7 { std::thread::sleep(t0.elapsed().mul_f64(1.0 - vital.energy)); }
@@ -225,4 +291,22 @@ fn main() -> Result<()> {
     drop(m);
     say(&sh, now(), "pausa".into());
     Ok(())
+}
+
+/// Complejidad de Lempel-Ziv (LZ76, Kaspar-Schuster).
+fn lz76(s: &[u8]) -> usize {
+    let n = s.len();
+    if n < 2 { return n; }
+    let (mut c, mut l, mut i, mut k, mut kmax) = (1usize, 1usize, 0usize, 1usize, 1usize);
+    loop {
+        if s[i + k - 1] == s[l + k - 1] {
+            k += 1;
+            if l + k > n { c += 1; break; }
+        } else {
+            kmax = kmax.max(k);
+            i += 1;
+            if i == l { c += 1; l += kmax; if l + 1 > n { break; } i = 0; k = 1; kmax = 1; } else { k = 1; }
+        }
+    }
+    c
 }

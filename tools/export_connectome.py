@@ -62,3 +62,20 @@ meta = {"source": "FlyWire v783 via Shiu et al. Connectivity_783.parquet", "n": 
         "groups": groups, "group_sizes": {k: len(v) for k, v in groups.items()}}
 (OUT / "meta.json").write_text(json.dumps(meta))
 print(json.dumps({k: meta[k] for k in ("n", "n_edges")}), meta["group_sizes"])
+
+# Región anatómica dominante por neurona (neuropilo con más sinapsis presinápticas).
+NP = ROOT / "data/flywire783/neuropil_count_pre/per_neuron_neuropil_count_pre_783.feather"
+REGIONS = ["otras", "OL", "MB", "CX", "AL", "LH", "SEZ", "AUD"]
+def region_of(np_name):
+    b = np_name.split("_")[0] if not np_name.startswith("MB_") else "MB"
+    return {"LA": 1, "ME": 1, "LO": 1, "LOP": 1, "AME": 1, "MB": 2, "FB": 3, "EB": 3, "PB": 3, "NO": 3,
+            "AL": 4, "LH": 5, "GNG": 6, "SAD": 6, "PRW": 6, "FLA": 6, "CAN": 6, "AMMC": 7, "WED": 7}.get(b, 0)
+if NP.exists():
+    d = pd.read_feather(NP)
+    d = d.sort_values("count", ascending=False).drop_duplicates("pre_pt_root_id")
+    dom = dict(zip(d.pre_pt_root_id.astype(np.int64), d.neuropil.astype(str)))
+    reg = np.array([region_of(dom.get(int(r), "None")) for r in ids], dtype=np.uint8)
+    reg.tofile(OUT / "region.u8")
+    meta["regions"] = REGIONS
+    (OUT / "meta.json").write_text(json.dumps(meta))
+    print("regiones:", {REGIONS[k]: int((reg == k).sum()) for k in range(len(REGIONS))})

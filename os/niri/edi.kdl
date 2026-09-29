@@ -19,12 +19,28 @@ window-rule {
     opacity 0.55
 }
 
+// Widget del escritorio: cerebro en miniatura + EDI con sus expresiones y bocadillos.
+window-rule {
+    match app-id="^edi-widget$"
+    open-floating true
+    open-focused false
+    default-floating-position x=16 y=48 relative-to="top-right"
+    default-column-width { fixed 540; }
+    default-window-height { fixed 430; }
+    focus-ring { off; }
+    border { off; }
+    geometry-corner-radius 12
+    clip-to-geometry true
+}
+
 spawn-at-startup "edi-shell"
+spawn-at-startup "edi-shell" "--widget"
 
 binds {
     Mod+Alt+B hotkey-overlay-title="EDI: su cerebro" { focus-workspace "edi"; }
     Mod+Alt+E hotkey-overlay-title="EDI: menú" { spawn "edi-menu"; }
     Mod+Alt+S hotkey-overlay-title="EDI: estado" { spawn-sh "notify-send \"EDI\" \"$(edi status)\""; }
     Mod+Alt+Z hotkey-overlay-title="EDI: dormir" { spawn "edi" "sleep"; }
+    Mod+Alt+W hotkey-overlay-title="EDI: widget" { spawn "edi-shell" "--widget"; }
 }
 // <<< EDI.os <<<

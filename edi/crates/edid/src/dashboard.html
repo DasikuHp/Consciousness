@@ -2,90 +2,188 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>EDI · cerebro</title>
 <style>
-:root{--fg:#cfeaf2;--dim:#7d98a8;--acc:#4fd1c5}
-html,body{margin:0;height:100%;background:#03040a;overflow:hidden;color:var(--fg);font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
-canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
-.p{position:fixed;background:rgba(6,10,20,.55);backdrop-filter:blur(8px);border:1px solid rgba(79,209,197,.18);border-radius:10px;padding:10px 12px}
-h3{margin:0 0 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
-#vit{left:14px;top:14px;min-width:240px}
-#mem{right:14px;top:14px;width:310px;max-height:52vh;overflow:auto}
-#chat{left:14px;bottom:14px;width:350px}
-#log{right:14px;bottom:14px;width:310px;max-height:24vh;overflow:auto;font-size:11px;color:var(--dim)}
-.row{display:flex;justify-content:space-between;gap:12px}.k{color:var(--dim)}
-.bar{height:4px;background:#12202c;border-radius:2px;margin:2px 0 6px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--acc)}
-.n{display:flex;gap:6px;align-items:center;margin:2px 0}.n b{flex:1;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tag{font-size:10px;padding:0 5px;border-radius:6px;background:#1b2b3a;color:#9fc}.dream{background:#3b2a5a;color:#d6b8ff}
-input{width:100%;box-sizing:border-box;background:#0a1220;color:var(--fg);border:1px solid #1e3a5f;border-radius:6px;padding:7px 9px;font:inherit}
-#title{position:fixed;left:50%;top:14px;transform:translateX(-50%);letter-spacing:.5em;color:#7fd;opacity:.75;font-size:11px}
-#legend{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);color:var(--dim);font-size:10px;display:flex;gap:12px}
-#legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+:root{--fg:#d6ecf3;--dim:#7f98a6;--line:rgba(120,200,220,.16);--acc:#4fd1c5;--panel:rgba(5,9,18,.62)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#020308;overflow:hidden;color:var(--fg);font:12px/1.5 "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+.p{position:fixed;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px;backdrop-filter:blur(3px)}
+h3{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg);font-weight:500}
+.row{display:flex;justify-content:space-between;gap:10px}.k{color:var(--dim)}.acc{color:var(--acc)}
+.bar{height:3px;background:#122230;margin:3px 0 7px}.bar>i{display:block;height:100%;background:var(--acc)}
+#top{position:fixed;left:360px;right:380px;top:10px;display:flex;align-items:center;gap:14px;color:#7fd8d8;letter-spacing:.6em;font-size:12px}
+#top .ln{flex:1;height:1px;background:var(--line)}#tclock{letter-spacing:.05em;color:var(--fg)}
+#vida{left:14px;top:14px;width:320px}#vista{left:14px;top:262px;width:320px}
+.mini{height:118px;margin:8px 0;border:1px solid var(--line);border-radius:4px;position:relative}
+.mini span{position:absolute;right:-92px;top:44px;color:var(--dim);letter-spacing:.12em;font-size:11px;width:80px}
+.mini{width:190px}
+#talk{left:14px;bottom:14px;width:320px}
+#talk .who{display:flex;gap:10px;align-items:flex-end;margin-top:8px}
+#talk img{width:54px;height:auto;filter:drop-shadow(0 0 10px rgba(79,209,197,.35))}
+.bub{position:relative;flex:1;border:1px solid #7fd8d8;border-radius:8px;padding:6px 9px;background:rgba(8,14,24,.8);white-space:pre-line;min-height:34px}
+.bub:after{content:"";position:absolute;right:-7px;bottom:12px;border:6px solid transparent;border-left-color:#7fd8d8}
+input{width:100%;background:#050b16;color:var(--fg);border:1px solid #2a4a66;border-radius:5px;padding:8px 10px;font:inherit}
+#mem{right:14px;top:14px;width:360px;max-height:350px;overflow:hidden}
+.n{display:flex;gap:8px;align-items:center;margin:1px 0}.n b{flex:1;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{font-size:10px;padding:0 6px;border-radius:3px;background:#0f3a3a;color:#8ff}.t-Episode{background:#123a4a}.t-Word{background:#1f3350;color:#bdf}.t-Concept{background:#3a2a55;color:#dbf}.t-Skill{background:#4a3a12;color:#fd9}.dream{background:#3b2a5a;color:#d6b8ff}
+#circ{right:14px;top:376px;width:360px}
+.c{display:flex;gap:8px;align-items:center;cursor:pointer;margin:2px 0}.c .dot{width:8px;height:8px;border-radius:50%}.c b{flex:1;font-weight:400}.c .eye{opacity:.45}.c.on .eye{opacity:1;color:#fd6}
+#det{right:14px;top:548px;bottom:30px;grid-auto-rows:1fr;width:360px;display:grid;grid-template-columns:1fr 1fr;gap:8px;background:none;border:none;padding:0;backdrop-filter:none}
+.d{border:1px solid var(--line);border-radius:5px;background:rgba(3,6,12,.35);position:relative}
+.d span{position:absolute;left:8px;top:5px;font-size:10px;letter-spacing:.12em;color:var(--fg);text-transform:uppercase}
+#bot{position:fixed;left:350px;right:390px;bottom:30px;height:178px;display:flex;gap:10px}#bot .p{position:static;height:100%;min-width:0}#act{flex:1.7}#act canvas{width:100%;height:136px}
+#met{flex:1.1}
+#reg{flex:1}#reg .row{font-size:11px;white-space:nowrap}
+.m{display:grid;grid-template-columns:118px 1fr 58px;font-size:11px;white-space:nowrap;align-items:center;gap:6px}.m .bar{margin:0}
+#legend{position:fixed;left:350px;right:390px;bottom:8px;white-space:nowrap;overflow:hidden;display:flex;justify-content:center;gap:16px;color:var(--dim);font-size:10px;flex-wrap:nowrap;gap:12px}
+#legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.lab{position:fixed;color:#e9f6ff;font-size:11px;letter-spacing:.12em;pointer-events:none;text-shadow:0 0 6px #000;white-space:nowrap}
+.lab:after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:1px;background:currentColor;opacity:.7}
+#scale{position:fixed;left:380px;bottom:228px;color:var(--fg);font-size:10.5px;text-align:center}
+#scale i{display:block;height:2px;background:var(--fg);margin-bottom:4px}
 </style></head><body>
-<canvas id="c"></canvas>
-<div id="title">E D I</div>
-<div class="p" id="vit"><h3>Vida</h3><div id="v"></div></div>
+<canvas id="gl"></canvas>
+<div id="top"><div class="ln"></div><span>E D I</span><div class="ln"></div><span id="tclock">t = 0.000 s</span></div>
+<div class="p" id="vida"><h3>Vida</h3><div id="v"></div></div>
+<div class="p" id="vista"><h3>Vista</h3><div id="vs"></div>
+ <div class="mini" id="vFront"><span>FRONTAL</span></div><div class="mini" id="vTop"><span>SUPERIOR</span></div><div class="mini" id="vSide"><span>LATERAL</span></div></div>
+<div class="p" id="talk"><h3>Háblale</h3><input id="t" placeholder="escribe algo y pulsa Enter…" autocomplete="off">
+ <div class="who"><div class="bub" id="bub">…</div><img id="face" alt="EDI"></div></div>
 <div class="p" id="mem"><h3>Memoria activa (SAMN)</h3><div id="m"></div></div>
-<div class="p" id="chat"><h3>Háblale</h3><input id="t" placeholder="escribe algo y pulsa Enter…" autocomplete="off"><div id="r" style="margin-top:6px;color:var(--dim)"></div></div>
-<div class="p" id="log"><h3>Diario</h3><div id="l"></div></div>
+<div class="p" id="circ"><h3>Circuitos destacados</h3><div id="cc"></div></div>
+<div class="p" id="det"><div class="d" id="dMB"><span>Cuerpo fungiforme</span></div><div class="d" id="dAL"><span>Lóbulo antenal</span></div><div class="d" id="dOL"><span>Capas ópticas (OL)</span></div><div class="d" id="dCX"><span>Complejo central</span></div></div>
+<div id="bot"><div class="p" id="act"><h3>Actividad <span class="k">(últimos 10 s)</span></h3><canvas id="tr"></canvas></div>
+<div class="p" id="met"><h3>Métricas en tiempo real</h3><div id="mt"></div></div>
+<div class="p" id="reg"><h3>Regiones <span class="k">(actividad)</span></h3><div id="rg"></div></div></div>
+<div id="scale"><i id="sbar"></i>100 µm</div>
 <div id="legend"></div>
 <script>
-const $=id=>document.getElementById(id),cv=$('c'),gl=cv.getContext('webgl',{antialias:false,alpha:false});
-const GC=[[.35,.45,.6],[.3,.6,1],[1,.62,.2],[1,.4,.7],[1,.9,.3],[.5,.5,1],[.3,1,.5],[.9,.3,.3],[1,.25,.5]];
-const GN=['otras','oído (JO)','descendentes','motoras','gusto','visión','kenyon','MBON','dopamina'];
-$('legend').innerHTML=GN.map((n,i)=>`<span><i style="background:rgb(${GC[i].map(x=>x*255|0)})"></i>${n}</span>`).join('');
-let N=0,act,pos,grp,bufA,ready=false;
-const vs=`attribute vec3 p;attribute float a;attribute float g;uniform mat4 M;uniform vec3 pal[9];uniform float px;varying vec3 c;varying float al;
-void main(){vec4 q=M*vec4(p,1.);gl_Position=q;int gi=int(g+.5);vec3 col=pal[0];
-for(int i=0;i<9;i++){if(i==gi)col=pal[i];}
-float v=.10+a*1.6;c=col*v;al=g>200.?0.:1.;gl_PointSize=(1.2+a*7.)*px/(q.w*.55+.6);}`;
-const fs=`precision mediump float;varying vec3 c;varying float al;void main(){vec2 d=gl_PointCoord-.5;float r=dot(d,d);if(r>.25||al<.5)discard;gl_FragColor=vec4(c*(1.-r*3.),1.);}`;
-function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(o));return o}
-const pg=gl.createProgram();gl.attachShader(pg,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pg,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pg);gl.useProgram(pg);
-gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);
-const L={p:gl.getAttribLocation(pg,'p'),a:gl.getAttribLocation(pg,'a'),g:gl.getAttribLocation(pg,'g'),M:gl.getUniformLocation(pg,'M'),pal:gl.getUniformLocation(pg,'pal'),px:gl.getUniformLocation(pg,'px')};
-gl.uniform3fv(L.pal,new Float32Array(GC.flat()));
+const $=id=>document.getElementById(id),cv=$('gl'),gl=cv.getContext('webgl',{antialias:true,alpha:false,premultipliedAlpha:false});
+// regiones: 0 otras,1 OL,2 MB,3 CX,4 AL,5 LH,6 SEZ,7 AUD
+const RC=[[.42,.5,.66],[.32,.52,1],[.78,.36,1],[1,.58,.18],[.25,.95,.55],[.2,.85,.95],[1,.9,.3],[1,.35,.55]];
+const RN=['otras','lóbulo óptico','cuerpo fungiforme','complejo central','lóbulo antenal','cuerno lateral','SEZ (motor)','vía auditiva'];
+const RS=['otras','OL','MB','CX','AL','LH','SEZ','AUD'];
+$('legend').innerHTML=['neuronas','spikes'].map((n,i)=>`<span><i style="background:${i?'#cfe':'#667'}"></i>${n}</span>`).join('')+RN.slice(1).map((n,i)=>`<span><i style="background:rgb(${RC[i+1].map(x=>x*255|0)})"></i>${n}</span>`).join('')+`<span><i style="background:rgb(${RC[0].map(x=>x*255|0)})"></i>otras regiones</span>`;
+const hex=c=>`rgb(${c.map(x=>x*255|0)})`;
+// ---------- shaders ----------
+const VP=`attribute vec3 p;attribute float a;attribute float r;uniform mat4 M;uniform vec3 pal[8];uniform float w[8];uniform float px;uniform float only;uniform float base;varying vec3 c;varying float al;
+void main(){vec4 q=M*vec4(p,1.);gl_Position=q;int ri=int(r+.5);vec3 col=pal[0];float ww=w[0];
+for(int i=0;i<8;i++){if(i==ri){col=pal[i];ww=w[i];}}
+float keep=(only<0.||abs(r-only)<.5)?1.:0.;float b=(base+a*1.6)*ww*keep;c=mix(col,vec3(1.),a*.55)*b;al=keep;
+gl_PointSize=(1.+a*5.)*px/(q.w*.6+.55);}`;
+const FP=`precision mediump float;varying vec3 c;varying float al;void main(){vec2 d=gl_PointCoord-.5;float r=dot(d,d)*4.;if(r>1.||al<.5)discard;gl_FragColor=vec4(c*exp(-r*2.6),1.);}`;
+const VL=`attribute vec3 p;attribute float a;attribute float r;uniform mat4 M;uniform vec3 pal[8];uniform float w[8];uniform float only;uniform float base;varying vec3 c;
+void main(){gl_Position=M*vec4(p,1.);int ri=int(r+.5);vec3 col=pal[0];float ww=w[0];for(int i=0;i<8;i++){if(i==ri){col=pal[i];ww=w[i];}}
+float keep=(only<0.||abs(r-only)<.5)?1.:0.;c=col*(base*.35+a*.45)*ww*keep;}`;
+const FL=`precision mediump float;varying vec3 c;void main(){gl_FragColor=vec4(c,1.);}`;
+function prog(v,f){const s=(t,x)=>{const o=gl.createShader(t);gl.shaderSource(o,x);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(o));return o};
+ const p=gl.createProgram();gl.attachShader(p,s(gl.VERTEX_SHADER,v));gl.attachShader(p,s(gl.FRAGMENT_SHADER,f));gl.linkProgram(p);
+ const L={};for(const n of['p','a','r'])L[n]=gl.getAttribLocation(p,n);for(const n of['M','pal','w','px','only','base'])L[n]=gl.getUniformLocation(p,n);return{p,L}}
+const P=prog(VP,FP),LN=prog(VL,FL);
+gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);gl.enable(gl.SCISSOR_TEST);
+// ---------- matrices ----------
 function mm(a,b){const o=new Float32Array(16);for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];o[i*4+j]=s}return o}
-function persp(f,as,n,fa){const t=1/Math.tan(f/2),r=1/(n-fa);return new Float32Array([t/as,0,0,0,0,t,0,0,0,0,(n+fa)*r,-1,0,0,2*n*fa*r,0])}
-function rotY(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1])}
-function rotX(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1])}
-function trans(z){return new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,z,1])}
-let yaw=.6,pit=.25,dist=2.6,drag=false,lx=0,ly=0,auto=true;
-cv.onmousedown=e=>{drag=true;lx=e.clientX;ly=e.clientY;auto=false};onmouseup=()=>{drag=false;setTimeout(()=>auto=true,4000)};
-onmousemove=e=>{if(drag){yaw+=(e.clientX-lx)*.006;pit=Math.max(-1.5,Math.min(1.5,pit+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY}};
-cv.onwheel=e=>{dist=Math.max(1.2,Math.min(6,dist*(1+e.deltaY*.001)));e.preventDefault()};
+const persp=(f,as,n,fa)=>{const t=1/Math.tan(f/2),r=1/(n-fa);return new Float32Array([t/as,0,0,0,0,t,0,0,0,0,(n+fa)*r,-1,0,0,2*n*fa*r,0])};
+const rY=a=>{const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1])};
+const rX=a=>{const c=Math.cos(a),s=Math.sin(a);return new Float32Array([1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1])};
+const tr=(x,y,z)=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,x,y,z,1]);
+function cam(yaw,pit,dist,tgt,as,fov){return mm(persp(fov||.8,as,.05,20),mm(tr(0,0,-dist),mm(rX(pit),mm(rY(yaw),tr(-tgt[0],-tgt[1],-tgt[2])))))}
+function proj(M,p,rect){const x=M[0]*p[0]+M[4]*p[1]+M[8]*p[2]+M[12],y=M[1]*p[0]+M[5]*p[1]+M[9]*p[2]+M[13],w=M[3]*p[0]+M[7]*p[1]+M[11]*p[2]+M[15];
+ return[rect.x+(x/w*.5+.5)*rect.w,rect.y+(1-(y/w*.5+.5))*rect.h]}
+// ---------- estado ----------
+let centS=[],N=0,pos,reg,act,ready=false,E=0,lpos,lreg,lact,lidx,bufs={},cent=[],umPerUnit=0;
+const view={yaw:0,pit:.12,dist:2.25,auto:true};let hl=new Float32Array(8).fill(1);
+let drag=false,lx,ly;cv.onmousedown=e=>{drag=true;lx=e.clientX;ly=e.clientY;view.auto=false};onmouseup=()=>drag=false;
+onmousemove=e=>{if(!drag)return;view.yaw+=(e.clientX-lx)*.006;view.pit=Math.max(-1.5,Math.min(1.5,view.pit+(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY};
+cv.onwheel=e=>{view.dist=Math.max(1,Math.min(6,view.dist*(1+e.deltaY*.001)));e.preventDefault()};cv.ondblclick=()=>view.auto=!view.auto;
+function buf(data,loc,sz,usage){const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,data,usage||gl.STATIC_DRAW);return{b,loc,sz}}
+function bind(x){gl.bindBuffer(gl.ARRAY_BUFFER,x.b);if(x.loc<0)return;gl.enableVertexAttribArray(x.loc);gl.vertexAttribPointer(x.loc,x.sz,gl.FLOAT,false,0,0)}
 async function init(){
- const [pb,gb]=await Promise.all([fetch('/pos').then(r=>r.arrayBuffer()),fetch('/group').then(r=>r.arrayBuffer())]);
- pos=new Float32Array(pb);grp=new Float32Array(new Uint8Array(gb));N=grp.length;act=new Float32Array(N);
- for(let i=0;i<N;i++)if(!isFinite(pos[i*3])){pos[i*3]=pos[i*3+1]=pos[i*3+2]=0;}
- const mk=(d,l,sz,usage)=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,d,usage);gl.enableVertexAttribArray(l);gl.vertexAttribPointer(l,sz,gl.FLOAT,false,0,0);return b};
- mk(pos,L.p,3,gl.STATIC_DRAW);bufA=mk(act,L.a,1,gl.DYNAMIC_DRAW);mk(grp,L.g,1,gl.STATIC_DRAW);ready=true;poll();
+ const [pb,rb,bb,st]=await Promise.all(['/pos','/region','/backbone'].map(u=>fetch(u).then(r=>r.arrayBuffer())).concat([fetch('/state').then(r=>r.json())]));
+ pos=new Float32Array(pb);reg=new Float32Array(new Uint8Array(rb));N=reg.length;act=new Float32Array(N);umPerUnit=st.um_per_unit||0;
+ const sum=Array.from({length:8},()=>[0,0,0,0]),side=Array.from({length:16},()=>[0,0,0,0]);
+ for(let i=0;i<N;i++){if(!isFinite(pos[i*3])){pos[i*3]=pos[i*3+1]=pos[i*3+2]=0;reg[i]=0;continue}for(const s of[sum[reg[i]],side[reg[i]*2+(pos[i*3]<0?0:1)]]){s[0]+=pos[i*3];s[1]+=pos[i*3+1];s[2]+=pos[i*3+2];s[3]++}}
+ const avg=s=>s[3]?[s[0]/s[3],s[1]/s[3],s[2]/s[3]]:[0,0,0];cent=sum.map(avg);centS=side.map(avg);
+ const e=new Uint32Array(bb);E=e.length/2;lpos=new Float32Array(E*6);lreg=new Float32Array(E*2);lact=new Float32Array(E*2);lidx=e;
+ for(let k=0;k<E*2;k++){const i=e[k];lpos.set(pos.subarray(i*3,i*3+3),k*3);lreg[k]=reg[i]}
+ bufs={p:buf(pos,P.L.p,3),a:buf(act,P.L.a,1,gl.DYNAMIC_DRAW),r:buf(reg,P.L.r,1),lp:buf(lpos,LN.L.p,3),la:buf(lact,LN.L.a,1,gl.DYNAMIC_DRAW),lr:buf(lreg,LN.L.r,1)};
+ ready=true;loops();
 }
-let last=0,frames=0;
+function rectOf(el){const r=el.getBoundingClientRect(),d=devicePixelRatio;return{x:r.left*d,y:r.top*d,w:r.width*d,h:r.height*d,css:r}}
+function draw(M,rect,only,pxs,base,noLines){
+ const H=cv.height;gl.viewport(rect.x,H-rect.y-rect.h,rect.w,rect.h);gl.scissor(rect.x,H-rect.y-rect.h,rect.w,rect.h);
+ if(!noLines){gl.useProgram(LN.p);gl.uniformMatrix4fv(LN.L.M,false,M);gl.uniform3fv(LN.L.pal,new Float32Array(RC.flat()));gl.uniform1fv(LN.L.w,hl);gl.uniform1f(LN.L.only,only);gl.uniform1f(LN.L.base,base);
+ bind(bufs.lp);bind(bufs.la);bind(bufs.lr);gl.drawArrays(gl.LINES,0,E*2);
+ for(const k of['lp','la','lr'])if(bufs[k].loc>=0)gl.disableVertexAttribArray(bufs[k].loc);}
+ gl.useProgram(P.p);gl.uniformMatrix4fv(P.L.M,false,M);gl.uniform3fv(P.L.pal,new Float32Array(RC.flat()));gl.uniform1fv(P.L.w,hl);gl.uniform1f(P.L.only,only);gl.uniform1f(P.L.px,pxs);gl.uniform1f(P.L.base,base);
+ bind(bufs.p);bind(bufs.a);bind(bufs.r);gl.drawArrays(gl.POINTS,0,N);
+ for(const k of['p','a','r'])gl.disableVertexAttribArray(bufs[k].loc);
+}
+const labs={};function label(id,txt,col){if(!labs[id]){const d=document.createElement('div');d.className='lab';document.body.appendChild(d);labs[id]=d}const d=labs[id];d.textContent=txt;d.style.color=col;return d}
 function frame(){
- const w=cv.clientWidth*devicePixelRatio|0,h=cv.clientHeight*devicePixelRatio|0;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
- gl.viewport(0,0,w,h);gl.clearColor(.012,.016,.04,1);gl.clear(gl.COLOR_BUFFER_BIT);
- if(ready){if(auto)yaw+=.0016;
-  gl.uniformMatrix4fv(L.M,false,mm(persp(.9,w/h,.1,20),mm(trans(-dist),mm(rotX(pit),rotY(yaw)))));gl.uniform1f(L.px,h/700*2.2);
-  for(let i=0;i<N;i++)act[i]*=.93;
-  gl.bindBuffer(gl.ARRAY_BUFFER,bufA);gl.bufferSubData(gl.ARRAY_BUFFER,0,act);gl.drawArrays(gl.POINTS,0,N);frames++}
+ const d=devicePixelRatio,w=cv.clientWidth*d|0,h=cv.clientHeight*d|0;if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+ gl.scissor(0,0,w,h);gl.clearColor(.008,.012,.03,1);gl.clear(gl.COLOR_BUFFER_BIT);
+ if(ready){
+  if(view.auto)view.yaw=Math.sin(performance.now()/9000)*.55;
+  for(let i=0;i<N;i++)act[i]*=.92;for(let k=0;k<E*2;k++)lact[k]=act[lidx[k]];
+  gl.bindBuffer(gl.ARRAY_BUFFER,bufs.a.b);gl.bufferSubData(gl.ARRAY_BUFFER,0,act);gl.bindBuffer(gl.ARRAY_BUFFER,bufs.la.b);gl.bufferSubData(gl.ARRAY_BUFFER,0,lact);
+  // vista principal: zona central
+  const L=340*d,R=w-385*d,T=40*d,B=h-225*d,main={x:L,y:T,w:R-L,h:B-T};
+  const M=cam(view.yaw,view.pit,view.dist,[0,0,0],main.w/main.h);draw(M,main,-1,h/650*1.5,.05);
+  const css={x:main.x/d,y:main.y/d,w:main.w/d,h:main.h/d};
+  [['oL',centS[2],'OPTIC LOBE',[-70,-70],'#e9f6ff'],['oR',centS[3],'OPTIC LOBE',[10,-70],'#e9f6ff'],['mb',centS[5],'MUSHROOM BODY',[-150,-95],'#e9f6ff'],
+   ['cx',cent[3],'CENTRAL COMPLEX',[90,-110],'#ffb35c'],['al',centS[8],'ANTENNAL LOBE',[-150,75],'#6fe'],['sez',cent[6],'SEZ',[70,80],'#e9f6ff']].forEach(([id,c,t,off,col])=>{
+   const [x,y]=proj(M,c,css);const el=label(id,t,col);el.style.left=(x+off[0])+'px';el.style.top=(y+off[1])+'px'});
+  if(umPerUnit){const px=(100/umPerUnit)*css.w*.5*(1/Math.tan(.4))/view.dist*(main.h/main.w);$('sbar').style.width=Math.max(8,px)+'px'}
+  // vistas ortogonales
+  const vs=[['vFront',0,0],['vTop',0,-1.5],['vSide',1.5708,0]];
+  for(const [id,y,p] of vs){const r=rectOf($(id));draw(cam(y,p,2.1,[0,0,0],r.w/r.h,.75),r,-1,h/1500,.011,true)}
+  // detalles por región
+  for(const [id,rg,y,p,dd] of [['dMB',2,.3,.2,.75],['dAL',4,0,.1,.55],['dOL',1,1.1,.1,1.15],['dCX',3,0,.25,.5]]){
+   const r=rectOf($(id));draw(cam(y,p,dd,cent[rg],r.w/r.h,.8),r,rg,h/800,.08)}
+ }
  requestAnimationFrame(frame)}
-const J=u=>fetch(u).then(r=>r.json());
-async function poll(){
- setInterval(async()=>{try{const d=await J('/spikes?since='+last);for(const t of d.ticks)for(const i of t.s)act[i]=1;last=d.last}catch(e){}},200);
- setInterval(async()=>{try{const s=await J('/state');
-  $('v').innerHTML=`<div class=row><span class=k>estado</span><b>${s.asleep?'durmiendo 🌙':'despierta'}</b></div>
-  <div class=row><span class=k>edad</span><span>${s.age_bio_s.toFixed(0)} s bio · nº ${s.births}</span></div>
-  <div class=row><span class=k>neuronas</span><span>${s.neurons.toLocaleString()}</span></div>
-  <div class=row><span class=k>spikes/tick</span><span>${s.spikes_last_tick}</span></div>
+// ---------- datos en vivo ----------
+const J=u=>fetch(u).then(r=>r.json());let last=0,hist=[],cmax=new Array(8).fill(1e-3);
+const CIRC=[['vía visual (OL → CX)',[1,3],1],['cuerpo fungiforme (MB)',[2],2],['olfato (AL → MB)',[4,2],4],['acción (CX → SEZ)',[3,6],3],['audición (JO → AMMC)',[7],7]];
+let circOn=new Set();
+function renderCirc(r){$('cc').innerHTML=CIRC.map(([n,rs,c],i)=>{const v=rs.reduce((s,k)=>s+r[k]/cmax[k],0)/rs.length;
+ return`<div class="c ${circOn.has(i)?'on':''}" data-i="${i}"><span class="eye">◉</span><span class="dot" style="background:${hex(RC[c])}"></span><b>${n}</b><span>${v.toFixed(2)}</span></div>`}).join('')+
+ `<div class="c ${circOn.size?'':'on'}" data-i="-1"><span class="eye">◉</span><span class="dot" style="background:#889"></span><b>todos los circuitos</b><span></span></div>`;
+ for(const el of $('cc').children)el.onclick=()=>{const i=+el.dataset.i;if(i<0)circOn.clear();else circOn.has(i)?circOn.delete(i):circOn.add(i);
+  hl=new Float32Array(8).fill(circOn.size?.15:1);for(const j of circOn)for(const k of CIRC[j][1])hl[k]=1.6}}
+function traces(){const c=$('tr'),d=devicePixelRatio,W=c.clientWidth*d,H=c.clientHeight*d;c.width=W;c.height=H;const g=c.getContext('2d');
+ g.clearRect(0,0,W,H);const rows=[[1,'OL (visual)'],[2,'MB (memoria)'],[3,'CX (integración)'],[4,'AL (olfato)'],[6,'SEZ (motor)'],[7,'AUD (oído)']];
+ const lw=110*d,rh=H/rows.length;g.font=`${10.5*d}px monospace`;
+ rows.forEach(([k,n],j)=>{const y0=rh*j+rh/2;g.fillStyle=hex(RC[k]);g.fillText(n,0,y0+4*d);
+  const mx=Math.max(...hist.map(h=>h.r[k]),1e-4);g.strokeStyle=hex(RC[k]);g.lineWidth=1.2*d;g.beginPath();
+  hist.forEach((h,i)=>{const x=lw+(W-lw)*i/Math.max(1,hist.length-1),y=y0+rh*.38-(h.r[k]/mx)*rh*.8;i?g.lineTo(x,y):g.moveTo(x,y)});g.stroke()})}
+function loops(){
+ setInterval(async()=>{try{const d=await J('/spikes?since='+last);for(const t of d.ticks)for(const i of t.s)act[i]=1;last=d.last}catch(e){}},150);
+ setInterval(async()=>{try{hist=await J('/activity');traces();const r=hist.length?hist[hist.length-1].r:new Array(8).fill(0);
+  r.forEach((v,k)=>cmax[k]=Math.max(cmax[k]*.995,v));renderCirc(r);
+  $('rg').innerHTML=[1,2,3,4,6,7,0].map(k=>`<div class="row"><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${hex(RC[k])};margin-right:7px"></i>${RS[k]==='otras'?'otras':RN[k].split(' ')[0]+' '+(RN[k].split(' ')[1]||'')} (${RS[k]})</span><span>${(r[k]/cmax[k]).toFixed(2)}</span></div>`).join('')}catch(e){}},1000);
+ setInterval(async()=>{try{const s=await J('/state');const m=s.metrics||{};$('tclock').textContent=`t = ${s.age_bio_s.toFixed(3)} s`;
+  $('v').innerHTML=`<div class=row><span class=k>estado</span><span>${s.asleep?'durmiendo':'despierta'}</span></div>
+  <div class=row><span class=k>edad</span><span>${s.age_bio_s.toFixed(0)} s (sim) · nº ${s.births}</span></div>
+  <div class=row><span class=k>neuronas</span><span>${s.neurons.toLocaleString('es')}</span></div>
+  <div class=row><span class=k>conexiones</span><span>${(s.synapses_edges||0).toLocaleString('es')}</span></div>
+  <div class=row><span class=k>spikes/tick</span><span>${s.spikes_last_tick.toLocaleString('es')}</span></div>
   <div class=row><span class=k>velocidad</span><span>×${(s.speed_x_realtime||0).toFixed(2)} tiempo real</span></div>
   <div class=row><span class=k>memoria</span><span>${s.memory.nodes} nodos · ${s.memory.edges} aristas</span></div>
-  <div class=k>energía (PSI)</div><div class=bar><i style="width:${s.energy*100}%"></i></div>
-  <div class=k>presión de sueño</div><div class=bar><i style="width:${Math.min(1,s.sleep_pressure)*100}%;background:#9f7aea"></i></div>`}catch(e){}},600);
+  <div class="acc">energía (PSI)</div><div class=bar><i style="width:${s.energy*100}%"></i></div>
+  <div class=k>presión de sueño</div><div class=bar><i style="width:${Math.min(1,s.sleep_pressure)*100}%;background:#9f7aea"></i></div>`;
+  $('vs').innerHTML=`<div class=row><span class=k>modo</span><span>3D (anatómico)</span></div><div class=row><span class=k>rotación</span><span>[ ${(view.yaw*57.3|0)}, ${(view.pit*57.3|0)}, 0 ]</span></div>
+  <div class=row><span class=k>zoom</span><span>${(2.25/view.dist).toFixed(1)}x</span></div><div class=row><span class=k>actividad</span><span class=acc>spikes en tiempo real</span></div>`;
+  const bar=(n,v,mx,f)=>`<div class=m><span class=k>${n}</span><div class=bar><i style="width:${Math.min(100,100*v/mx)}%"></i></div><span>${f}</span></div>`;
+  $('mt').innerHTML=bar('spikes/s',m.spikes_s||0,4e4,((m.spikes_s||0)|0).toLocaleString('es'))+bar('sinapsis activas',m.active_syn_pct||0,5,(m.active_syn_pct||0).toFixed(2)+' %')+
+   bar('entropía (red)',m.entropy_bits||0,3,(m.entropy_bits||0).toFixed(2))+bar('complejidad (LZ)',m.lz||0,1,(m.lz||0).toFixed(2))+bar('sincronía',m.sync||0,1,(m.sync||0).toFixed(2))+
+   `<div class=m><span class=k>integración (PCI)</span><span class=k style="grid-column:span 2">requiere perturbación</span></div>`;
+  if(s.face)setFace(s.face)}catch(e){}},600);
  setInterval(async()=>{try{const m=await J('/memory');
-  $('m').innerHTML=`<div class=k>${m.episodes} episodios</div>`+m.top.map(n=>`<div class=n><span class="tag ${n.dreamed?'dream':''}">${n.dreamed?'soñado':n.kind}</span><b title="${n.label}">${n.label}</b><span>${(n.a*100)|0}</span></div>`).join('')}catch(e){}},1200);
- setInterval(async()=>{try{const e=await J('/events');$('l').innerHTML=e.slice(-14).reverse().map(x=>`<div>${x}</div>`).join('')}catch(e){}},1500);
+  $('m').innerHTML=`<div class=k>${m.episodes} episodios:</div>`+m.top.map(n=>`<div class=n><span class="tag t-${n.kind} ${n.dreamed?'dream':''}">${n.dreamed?'soñado':({Event:'event',Word:'palabra',Episode:'episodio',Concept:'concepto',Skill:'habilidad'}[n.kind]||n.kind)}</span><b title="${n.label}">${n.label}</b><span>${(n.a*100)|0}</span></div>`).join('')}catch(e){}},1200);
 }
+let faceId=0;function setFace(f){if(f.id!==faceId){$('face').src=`/face/${String(f.id).padStart(2,'0')}_${f.name}.png`;faceId=f.id}$('bub').textContent=f.line}
 $('t').onkeydown=async e=>{if(e.key!=='Enter'||!e.target.value.trim())return;const v=e.target.value;e.target.value='';
- $('r').textContent='…';const r=await fetch('/say',{method:'POST',body:v}).then(r=>r.json());
- $('r').innerHTML=r.known?`recuerda «${r.query}»: `+r.recalled.slice(0,6).map(x=>x.label).join(' · '):`«${r.query}»: nuevo para mí`};
+ await fetch('/say',{method:'POST',body:v});setTimeout(async()=>setFace(await J('/face')),150)};
 init();frame();
 </script></body></html>

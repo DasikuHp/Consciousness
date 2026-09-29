@@ -15,9 +15,14 @@ pub struct Shared {
     pub force_sleep: AtomicBool,
     pub pos: Vec<u8>,
     pub group: Vec<u8>,
+    pub region: Vec<u8>,
+    pub backbone: Vec<u8>,
+    pub activity: Mutex<VecDeque<(u64, Vec<f32>)>>,
+    pub face: Mutex<serde_json::Value>,
 }
 
 const DASH: &str = include_str!("dashboard.html");
+const WIDGET: &str = include_str!("widget.html");
 
 fn respond(s: &mut TcpStream, ctype: &str, body: &[u8]) {
     let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: {ctype}\r\nContent-Length: {}\r\nCache-Control: no-store\r\n\r\n", body.len());
@@ -58,6 +63,22 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
         ("GET", "/state") => { let b = sh.state.lock().unwrap().to_string(); respond(&mut s, "application/json", b.as_bytes()) }
         ("GET", "/pos") => respond(&mut s, "application/octet-stream", &sh.pos),
         ("GET", "/group") => respond(&mut s, "application/octet-stream", &sh.group),
+        ("GET", "/region") => respond(&mut s, "application/octet-stream", &sh.region),
+        ("GET", "/backbone") => respond(&mut s, "application/octet-stream", &sh.backbone),
+        ("GET", "/widget") => respond(&mut s, "text/html; charset=utf-8", WIDGET.as_bytes()),
+        ("GET", "/face") => { let b = sh.face.lock().unwrap().to_string(); respond(&mut s, "application/json", b.as_bytes()) }
+        ("GET", "/activity") => {
+            let a = sh.activity.lock().unwrap();
+            let v: Vec<_> = a.iter().map(|(t, r)| serde_json::json!({"t": t, "r": r})).collect();
+            respond(&mut s, "application/json", serde_json::json!(v).to_string().as_bytes())
+        }
+        ("GET", p) if p.starts_with("/face/") && p.ends_with(".png") && !p.contains("..") => {
+            let dir = std::env::var("EDI_ASSETS").unwrap_or("/usr/share/edi/face".into());
+            match std::fs::read(format!("{dir}/{}", &p[6..])) {
+                Ok(b) => { let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {}\r\nCache-Control: max-age=86400\r\n\r\n", b.len()); let _ = s.write_all(&b); }
+                Err(_) => { let _ = s.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"); }
+            }
+        }
         ("GET", "/spikes") => {
             let since: u64 = q("since").and_then(|v| v.parse().ok()).unwrap_or(0);
             let ring = sh.spikes.lock().unwrap();
