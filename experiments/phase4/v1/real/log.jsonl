@@ -51,3 +51,4 @@
 {"eval_acc":0.2844827473163605,"eval_ce":2.5407471656799316,"gen":490,"heard":"ola. soy edi. hola edi. te oigo","said":"      o  e         o    e  o   ","train_fit":-2.7426369190216064}
 {"eval_acc":0.3017241358757019,"eval_ce":2.531993865966797,"gen":500,"heard":"ola. soy edi. hola edi. te oigo","said":"     oo  e .. oo   o    ee o   ","train_fit":-2.6504929065704346}
 {"eval_acc":0.2844827473163605,"eval_ce":2.532686233520508,"gen":510,"heard":"ola. soy edi. hola edi. te oigo","said":"      e  e .. ee   e    ee e   ","train_fit":-2.7016708850860596}
+{"eval_acc":0.2931034564971924,"eval_ce":2.544462203979492,"gen":520,"heard":"ola. soy edi. hola edi. te oigo","said":"      e  e .. oo   e .. ea o.. ","train_fit":-2.6094305515289307}

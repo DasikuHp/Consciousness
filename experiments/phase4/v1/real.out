@@ -50,3 +50,4 @@
 [real] gen  490 ce=2.541 acc=0.284 (uni=2.916 bi=2.357) dice: "      o  e         o    e  o   "
 [real] gen  500 ce=2.532 acc=0.302 (uni=2.916 bi=2.357) dice: "     oo  e .. oo   o    ee o   "
 [real] gen  510 ce=2.533 acc=0.284 (uni=2.916 bi=2.357) dice: "      e  e .. ee   e    ee e   "
+[real] gen  520 ce=2.544 acc=0.293 (uni=2.916 bi=2.357) dice: "      e  e .. oo   e .. ea o.. "
