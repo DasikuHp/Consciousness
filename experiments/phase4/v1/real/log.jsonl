@@ -52,3 +52,7 @@
 {"eval_acc":0.3017241358757019,"eval_ce":2.531993865966797,"gen":500,"heard":"ola. soy edi. hola edi. te oigo","said":"     oo  e .. oo   o    ee o   ","train_fit":-2.6504929065704346}
 {"eval_acc":0.2844827473163605,"eval_ce":2.532686233520508,"gen":510,"heard":"ola. soy edi. hola edi. te oigo","said":"      e  e .. ee   e    ee e   ","train_fit":-2.7016708850860596}
 {"eval_acc":0.2931034564971924,"eval_ce":2.544462203979492,"gen":520,"heard":"ola. soy edi. hola edi. te oigo","said":"      e  e .. oo   e .. ea o.. ","train_fit":-2.6094305515289307}
+{"eval_acc":0.2931034564971924,"eval_ce":2.5338406562805176,"gen":530,"heard":"ola. soy edi. hola edi. te oigo","said":"     oo  e .. oo   o .. oa o   ","train_fit":-2.690124750137329}
+{"eval_acc":0.26724138855934143,"eval_ce":2.5347483158111572,"gen":540,"heard":"ola. soy edi. hola edi. te oigo","said":"     eo  e .. ea   e .. ea e   ","train_fit":-2.801281213760376}
+{"eval_acc":0.26724138855934143,"eval_ce":2.5478053092956543,"gen":550,"heard":"ola. soy edi. hola edi. te oigo","said":"     oo  es.o oa   oo.o oa o   ","train_fit":-2.3257837295532227}
+{"eval_acc":0.26724138855934143,"eval_ce":2.5478100776672363,"gen":560,"heard":"ola. soy edi. hola edi. te oigo","said":"     oo  esoo oa   o oo oa o   ","train_fit":-2.7877864837646484}
