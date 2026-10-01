@@ -1,0 +1,8 @@
+[shuffle] gen    0 ce=3.426 acc=0.069 (uni=2.916 bi=2.357) dice: "ssoozsssssoooosssoossooossossoo"
+[shuffle] gen   10 ce=3.225 acc=0.216 (uni=2.916 bi=2.357) dice: ".ooo oo ooo..  oooooo.. o  oo ."
+[shuffle] gen   20 ce=3.090 acc=0.198 (uni=2.916 bi=2.357) dice: "                               "
+[shuffle] gen   30 ce=2.988 acc=0.198 (uni=2.916 bi=2.357) dice: "                               "
+[shuffle] gen   40 ce=2.933 acc=0.198 (uni=2.916 bi=2.357) dice: "                               "
+[shuffle] gen   50 ce=2.911 acc=0.198 (uni=2.916 bi=2.357) dice: "                               "
+[shuffle] gen   60 ce=2.883 acc=0.198 (uni=2.916 bi=2.357) dice: "                               "
+[shuffle] gen   70 ce=2.855 acc=0.198 (uni=2.916 bi=2.357) dice: "                               "

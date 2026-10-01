@@ -50,7 +50,7 @@ const J=u=>fetch(u).then(r=>r.json());let fid=0,fline='';
 setInterval(async()=>{try{const x=await J('/spikes?since='+last);for(const t of x.ticks){for(const i of t.s)act[i]=1;spk.push(t.s.length)}last=x.last;spk=spk.slice(-40);spark()}catch(e){}},200);
 setInterval(async()=>{try{const s=await J('/state');$('spd').textContent='×'+(s.speed_x_realtime||0).toFixed(2);$('nn').textContent=s.neurons.toLocaleString('en')+' n';
  $('dot').style.background=s.asleep?'#9f7aea':s.energy<.5?'#f6ad55':'#4fd1c5';const f=s.face;if(!f)return;
- if(f.id!==fid){$('face').src=`/face/${String(f.id).padStart(2,'0')}_${f.name}.png`;fid=f.id}
+ if(f.id!==fid){$('face').src=`/face/${String(f.id).padStart(2,'0')}_${f.name}.svg`;fid=f.id}
  if(f.line!==fline){fline=f.line;const b=$('bub');b.classList.remove('on');setTimeout(()=>{b.textContent=f.line;b.classList.add('on')},250)}}catch(e){}},700);
 init();frame();
 </script></body></html>

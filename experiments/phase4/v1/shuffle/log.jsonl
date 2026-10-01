@@ -1,0 +1,9 @@
+{"ce_bigram":2.35749274358275,"ce_uniform":3.4339872044851463,"ce_unigram":2.915598224414071,"mode":"shuffle","n_readout_reached":19,"nf":425,"nin":387,"vocab":31}
+{"eval_acc":0.06896551698446274,"eval_ce":3.4255385398864746,"gen":0,"heard":"ola. soy edi. hola edi. te oigo","said":"ssoozsssssoooosssoossooossossoo","train_fit":-3.5058422088623047}
+{"eval_acc":0.21551723778247833,"eval_ce":3.224809408187866,"gen":10,"heard":"ola. soy edi. hola edi. te oigo","said":".ooo oo ooo..  oooooo.. o  oo .","train_fit":-3.2329728603363037}
+{"eval_acc":0.1982758641242981,"eval_ce":3.0897183418273926,"gen":20,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-3.2128536701202393}
+{"eval_acc":0.1982758641242981,"eval_ce":2.9878036975860596,"gen":30,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-2.9827544689178467}
+{"eval_acc":0.1982758641242981,"eval_ce":2.932689905166626,"gen":40,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-3.0249245166778564}
+{"eval_acc":0.1982758641242981,"eval_ce":2.9111580848693848,"gen":50,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-2.862769842147827}
+{"eval_acc":0.1982758641242981,"eval_ce":2.883075475692749,"gen":60,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-3.2851197719573975}
+{"eval_acc":0.1982758641242981,"eval_ce":2.854586362838745,"gen":70,"heard":"ola. soy edi. hola edi. te oigo","said":"                               ","train_fit":-2.9796009063720703}

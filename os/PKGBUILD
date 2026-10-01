@@ -31,7 +31,7 @@ package() {
   install -Dm644 "$EDI_SRC/os/systemd/edid.service" "$pkgdir/usr/lib/systemd/user/edid.service"
   install -Dm644 "$EDI_SRC/os/niri/edi.kdl" "$pkgdir/usr/share/edi/niri/edi.kdl"
   install -Dm644 "$EDI_SRC/os/omarchy/hooks/post-update" "$pkgdir/usr/share/edi/omarchy/hooks/post-update"
-  install -Dm644 -t "$pkgdir/usr/share/edi/face" "$EDI_SRC"/os/assets/face/*.png "$EDI_SRC/os/assets/face/index.json"
+  install -Dm644 -t "$pkgdir/usr/share/edi/face" "$EDI_SRC"/os/assets/face/*.svg "$EDI_SRC"/os/assets/face/*.png "$EDI_SRC/os/assets/face/index.json"
   for f in meta.json region.u8 row_ptr.u32 col.u32 w.i32 root_id.i64 pos.f32; do
     install -Dm644 "$EDI_SRC/data/brain/flywire783/$f" "$pkgdir/usr/share/edi/brain/flywire783/$f"
   done

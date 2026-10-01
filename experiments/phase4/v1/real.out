@@ -55,3 +55,7 @@
 [real] gen  540 ce=2.535 acc=0.267 (uni=2.916 bi=2.357) dice: "     eo  e .. ea   e .. ea e   "
 [real] gen  550 ce=2.548 acc=0.267 (uni=2.916 bi=2.357) dice: "     oo  es.o oa   oo.o oa o   "
 [real] gen  560 ce=2.548 acc=0.267 (uni=2.916 bi=2.357) dice: "     oo  esoo oa   o oo oa o   "
+[real] gen  570 ce=2.537 acc=0.276 (uni=2.916 bi=2.357) dice: "     eo  e    ee   o    ea e   "
+[real] gen  580 ce=2.551 acc=0.259 (uni=2.916 bi=2.357) dice: "     ee  e    ee   e    ee e   "
+[real] gen  590 ce=2.560 acc=0.259 (uni=2.916 bi=2.357) dice: "     ee  e e  ee   e e  ee e   "
+[real] gen  599 ce=2.555 acc=0.267 (uni=2.916 bi=2.357) dice: "     ee  e    ee   e    ee e   "

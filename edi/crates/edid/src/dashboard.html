@@ -78,7 +78,12 @@ const FL=`precision mediump float;varying vec3 c;void main(){gl_FragColor=vec4(c
 function prog(v,f){const s=(t,x)=>{const o=gl.createShader(t);gl.shaderSource(o,x);gl.compileShader(o);if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(o));return o};
  const p=gl.createProgram();gl.attachShader(p,s(gl.VERTEX_SHADER,v));gl.attachShader(p,s(gl.FRAGMENT_SHADER,f));gl.linkProgram(p);
  const L={};for(const n of['p','a','r'])L[n]=gl.getAttribLocation(p,n);for(const n of['M','pal','w','px','only','base'])L[n]=gl.getUniformLocation(p,n);return{p,L}}
-const P=prog(VP,FP),LN=prog(VL,FL);
+const VS_SK=`attribute vec3 p;attribute float n;uniform mat4 M;uniform vec3 pal[8];uniform float w[8];uniform float only;uniform float base;uniform float q;uniform sampler2D T;uniform vec2 TS;varying vec3 c;
+void main(){gl_Position=M*vec4(p/q,1.);vec2 uv=vec2((mod(n,TS.x)+.5)/TS.x,(floor(n/TS.x)+.5)/TS.y);vec4 t=texture2D(T,uv);float a=t.r;float r=floor(t.a*255.+.5);
+int ri=int(r);vec3 col=pal[0];float ww=w[0];for(int i=0;i<8;i++){if(i==ri){col=pal[i];ww=w[i];}}
+float keep=(only<0.||abs(r-only)<.5)?1.:0.;c=mix(col,vec3(1.),a*.6)*(base+a*.9)*ww*keep;}`;
+const P=prog(VP,FP),LN=prog(VL,FL),SK=(()=>{const x=prog(VS_SK,FL);for(const k of['n'])x.L[k]=gl.getAttribLocation(x.p,k);for(const k of['q','T','TS'])x.L[k]=gl.getUniformLocation(x.p,k);return x})();
+let skel=null,skelS=null,TW=512,TH=1,texBuf,actTex;
 gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE);gl.enable(gl.SCISSOR_TEST);
 // ---------- matrices ----------
 function mm(a,b){const o=new Float32Array(16);for(let i=0;i<4;i++)for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+j]*b[i*4+k];o[i*4+j]=s}return o}
@@ -106,12 +111,28 @@ async function init(){
  const e=new Uint32Array(bb);E=e.length/2;lpos=new Float32Array(E*6);lreg=new Float32Array(E*2);lact=new Float32Array(E*2);lidx=e;
  for(let k=0;k<E*2;k++){const i=e[k];lpos.set(pos.subarray(i*3,i*3+3),k*3);lreg[k]=reg[i]}
  bufs={p:buf(pos,P.L.p,3),a:buf(act,P.L.a,1,gl.DYNAMIC_DRAW),r:buf(reg,P.L.r,1),lp:buf(lpos,LN.L.p,3),la:buf(lact,LN.L.a,1,gl.DYNAMIC_DRAW),lr:buf(lreg,LN.L.r,1)};
- ready=true;loops();
+ ready=true;loops();loadSkel();
 }
+async function loadSkel(){
+ TH=Math.ceil(N/TW);texBuf=new Uint8Array(TW*TH*2);for(let i=0;i<N;i++)texBuf[i*2+1]=reg[i];
+ actTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,actTex);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+ gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE_ALPHA,TW,TH,0,gl.LUMINANCE_ALPHA,gl.UNSIGNED_BYTE,texBuf);
+ const get=async lod=>{const r=await fetch('/skel?lod='+lod);if(!r.ok)return null;const b=await r.arrayBuffer();const nv=new DataView(b).getUint32(0,true);
+  const seg=new Int16Array(b,8,nv*6),nid=new Uint32Array(b,8+nv*12+((nv*12)%4?4-(nv*12)%4:0),nv);const nf=new Float32Array(nv*2);for(let k=0;k<nv;k++){nf[2*k]=nf[2*k+1]=nid[k]}
+  const pb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pb);gl.bufferData(gl.ARRAY_BUFFER,seg,gl.STATIC_DRAW);
+  const nb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,nb);gl.bufferData(gl.ARRAY_BUFFER,nf,gl.STATIC_DRAW);return{pb,nb,nv}};
+ skelS=await get('small');skel=await get('full')||skelS;
+}
+function drawSkel(S,M,only,base){if(!S)return;gl.useProgram(SK.p);gl.uniformMatrix4fv(SK.L.M,false,M);gl.uniform3fv(SK.L.pal,new Float32Array(RC.flat()));gl.uniform1fv(SK.L.w,hl);
+ gl.uniform1f(SK.L.only,only);gl.uniform1f(SK.L.base,base);gl.uniform1f(SK.L.q,26000.);gl.uniform2f(SK.L.TS,TW,TH);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,actTex);gl.uniform1i(SK.L.T,0);
+ gl.bindBuffer(gl.ARRAY_BUFFER,S.pb);gl.enableVertexAttribArray(SK.L.p);gl.vertexAttribPointer(SK.L.p,3,gl.SHORT,false,0,0);
+ gl.bindBuffer(gl.ARRAY_BUFFER,S.nb);gl.enableVertexAttribArray(SK.L.n);gl.vertexAttribPointer(SK.L.n,1,gl.FLOAT,false,0,0);
+ gl.drawArrays(gl.LINES,0,S.nv*2);gl.disableVertexAttribArray(SK.L.p);gl.disableVertexAttribArray(SK.L.n)}
 function rectOf(el){const r=el.getBoundingClientRect(),d=devicePixelRatio;return{x:r.left*d,y:r.top*d,w:r.width*d,h:r.height*d,css:r}}
-function draw(M,rect,only,pxs,base,noLines){
+function draw(M,rect,only,pxs,base,noLines,sk){
  const H=cv.height;gl.viewport(rect.x,H-rect.y-rect.h,rect.w,rect.h);gl.scissor(rect.x,H-rect.y-rect.h,rect.w,rect.h);
- if(!noLines){gl.useProgram(LN.p);gl.uniformMatrix4fv(LN.L.M,false,M);gl.uniform3fv(LN.L.pal,new Float32Array(RC.flat()));gl.uniform1fv(LN.L.w,hl);gl.uniform1f(LN.L.only,only);gl.uniform1f(LN.L.base,base);
+ if(sk&&skel){drawSkel(sk,M,only,base*1.4)}else if(!noLines){gl.useProgram(LN.p);gl.uniformMatrix4fv(LN.L.M,false,M);gl.uniform3fv(LN.L.pal,new Float32Array(RC.flat()));gl.uniform1fv(LN.L.w,hl);gl.uniform1f(LN.L.only,only);gl.uniform1f(LN.L.base,base);
  bind(bufs.lp);bind(bufs.la);bind(bufs.lr);gl.drawArrays(gl.LINES,0,E*2);
  for(const k of['lp','la','lr'])if(bufs[k].loc>=0)gl.disableVertexAttribArray(bufs[k].loc);}
  gl.useProgram(P.p);gl.uniformMatrix4fv(P.L.M,false,M);gl.uniform3fv(P.L.pal,new Float32Array(RC.flat()));gl.uniform1fv(P.L.w,hl);gl.uniform1f(P.L.only,only);gl.uniform1f(P.L.px,pxs);gl.uniform1f(P.L.base,base);
@@ -124,11 +145,11 @@ function frame(){
  gl.scissor(0,0,w,h);gl.clearColor(.008,.012,.03,1);gl.clear(gl.COLOR_BUFFER_BIT);
  if(ready){
   if(view.auto)view.yaw=Math.sin(performance.now()/9000)*.55;
-  for(let i=0;i<N;i++)act[i]*=.92;for(let k=0;k<E*2;k++)lact[k]=act[lidx[k]];
+  for(let i=0;i<N;i++)act[i]*=.92;if(actTex){for(let i=0;i<N;i++)texBuf[i*2]=Math.min(255,act[i]*255);gl.bindTexture(gl.TEXTURE_2D,actTex);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,TW,TH,gl.LUMINANCE_ALPHA,gl.UNSIGNED_BYTE,texBuf)}for(let k=0;k<E*2;k++)lact[k]=act[lidx[k]];
   gl.bindBuffer(gl.ARRAY_BUFFER,bufs.a.b);gl.bufferSubData(gl.ARRAY_BUFFER,0,act);gl.bindBuffer(gl.ARRAY_BUFFER,bufs.la.b);gl.bufferSubData(gl.ARRAY_BUFFER,0,lact);
   // vista principal: zona central
   const L=340*d,R=w-385*d,T=40*d,B=h-225*d,main={x:L,y:T,w:R-L,h:B-T};
-  const M=cam(view.yaw,view.pit,view.dist,[0,0,0],main.w/main.h);draw(M,main,-1,h/650*1.5,.05);
+  const M=cam(view.yaw,view.pit,view.dist,[0,0,0],main.w/main.h);draw(M,main,-1,h/650*(skel?.9:1.5),skel?.012:.05,false,skel);
   const css={x:main.x/d,y:main.y/d,w:main.w/d,h:main.h/d};
   [['oL',centS[2],'OPTIC LOBE',[-70,-70],'#e9f6ff'],['oR',centS[3],'OPTIC LOBE',[10,-70],'#e9f6ff'],['mb',centS[5],'MUSHROOM BODY',[-150,-95],'#e9f6ff'],
    ['cx',cent[3],'CENTRAL COMPLEX',[90,-110],'#ffb35c'],['al',centS[8],'ANTENNAL LOBE',[-150,75],'#6fe'],['sez',cent[6],'SEZ',[70,80],'#e9f6ff']].forEach(([id,c,t,off,col])=>{
@@ -136,10 +157,10 @@ function frame(){
   if(umPerUnit){const px=(100/umPerUnit)*css.w*.5*(1/Math.tan(.4))/view.dist*(main.h/main.w);$('sbar').style.width=Math.max(8,px)+'px'}
   // vistas ortogonales
   const vs=[['vFront',0,0],['vTop',0,-1.5],['vSide',1.5708,0]];
-  for(const [id,y,p] of vs){const r=rectOf($(id));draw(cam(y,p,2.1,[0,0,0],r.w/r.h,.75),r,-1,h/1500,.011,true)}
+  for(const [id,y,p] of vs){const r=rectOf($(id));draw(cam(y,p,2.1,[0,0,0],r.w/r.h,.75),r,-1,h/1500,.011,true,skelS)}
   // detalles por región
   for(const [id,rg,y,p,dd] of [['dMB',2,.3,.2,.75],['dAL',4,0,.1,.55],['dOL',1,1.1,.1,1.15],['dCX',3,0,.25,.5]]){
-   const r=rectOf($(id));draw(cam(y,p,dd,cent[rg],r.w/r.h,.8),r,rg,h/800,.08)}
+   const r=rectOf($(id));draw(cam(y,p,dd,cent[rg],r.w/r.h,.8),r,rg,h/800,.08,false,skelS)}
  }
  requestAnimationFrame(frame)}
 // ---------- datos en vivo ----------
@@ -182,7 +203,7 @@ function loops(){
  setInterval(async()=>{try{const m=await J('/memory');
   $('m').innerHTML=`<div class=k>${m.episodes} episodios:</div>`+m.top.map(n=>`<div class=n><span class="tag t-${n.kind} ${n.dreamed?'dream':''}">${n.dreamed?'soñado':({Event:'event',Word:'palabra',Episode:'episodio',Concept:'concepto',Skill:'habilidad'}[n.kind]||n.kind)}</span><b title="${n.label}">${n.label}</b><span>${(n.a*100)|0}</span></div>`).join('')}catch(e){}},1200);
 }
-let faceId=0;function setFace(f){if(f.id!==faceId){$('face').src=`/face/${String(f.id).padStart(2,'0')}_${f.name}.png`;faceId=f.id}$('bub').textContent=f.line}
+let faceId=0;function setFace(f){if(f.id!==faceId){$('face').src=`/face/${String(f.id).padStart(2,'0')}_${f.name}.svg`;faceId=f.id}$('bub').textContent=f.line}
 $('t').onkeydown=async e=>{if(e.key!=='Enter'||!e.target.value.trim())return;const v=e.target.value;e.target.value='';
  await fetch('/say',{method:'POST',body:v});setTimeout(async()=>setFace(await J('/face')),150)};
 init();frame();

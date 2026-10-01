@@ -15,7 +15,7 @@ use rand_distr::StandardNormal;
 use std::collections::HashSet;
 
 const CORPUS: &str = include_str!("../corpus_es.txt");
-const T_TOK_MS: f64 = 10.0;
+const N_RO: usize = 400;
 const R_MAX: f32 = 250.0;
 
 fn probe(c: &Connectome, jo: &[u32], n: usize) -> Vec<u32> {
@@ -31,7 +31,7 @@ fn probe(c: &Connectome, jo: &[u32], n: usize) -> Vec<u32> {
 }
 
 /// Rasgos por carácter: (residual [rates actuales|previos], cerebro [conteo, traza 0.6, 0.85, 0.95]).
-fn features(c: &Connectome, ids: &[usize], e: &[f32], v: usize, jo: &[u32], ro: &[u32], seed: u64) -> (Vec<Vec<f32>>, Vec<Vec<f32>>) {
+fn features(c: &Connectome, ids: &[usize], e: &[f32], v: usize, jo: &[u32], ro: &[u32], seed: u64, t_tok: f64) -> (Vec<Vec<f32>>, Vec<Vec<f32>>) {
     let nin = jo.len();
     let mut brain = Brain::new(c, Params { dt: 0.5, ..Params::default() });
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
@@ -39,15 +39,15 @@ fn features(c: &Connectome, ids: &[usize], e: &[f32], v: usize, jo: &[u32], ro: 
     let mut tr = vec![vec![0f32; ro.len()]; taus.len()];
     let (mut res, mut brn) = (Vec::new(), Vec::new());
     let rate = |x: usize| -> Vec<f32> { (0..nin).map(|j| R_MAX / (1.0 + (-(e[x * nin + j] - 1.5)).exp())).collect() };
-    let _ = v;
     let mut prev = ids[0];
+    let mut prev_id = ids[0];
     for &x in ids {
         let r = rate(x);
         let rp = rate(prev);
         prev = x;
         let drive: Vec<(u32, f32)> = jo.iter().zip(&r).map(|(&i, &q)| (i, q)).collect();
         brain.reset_counts();
-        brain.run(T_TOK_MS, &drive, &mut rng);
+        brain.run(t_tok, &drive, &mut rng);
         let mut f = Vec::with_capacity(ro.len() * 4);
         for (k, &i) in ro.iter().enumerate() {
             let cnt = brain.counts[i as usize] as f32;
@@ -55,7 +55,13 @@ fn features(c: &Connectome, ids: &[usize], e: &[f32], v: usize, jo: &[u32], ro: 
             for (t, &a) in taus.iter().enumerate() { tr[t][k] = a * tr[t][k] + (1.0 - a) * cnt; }
         }
         for t in &tr { f.extend(t.iter().cloned()); }
-        res.push(r.iter().chain(rp.iter()).map(|q| q / R_MAX).collect());
+        // residual = letra actual + anterior en one-hot (misma información que recibe el cerebro)
+        let mut oh = vec![0f32; 2 * v];
+        oh[x] = 1.0;
+        oh[v + prev_id] = 1.0;
+        prev_id = x;
+        let _ = (&r, &rp);
+        res.push(oh);
         brn.push(f);
     }
     (res, brn)
@@ -112,9 +118,9 @@ fn eval(w: &[Vec<f64>], x: &[Vec<f32>], y: &[usize], temp: f64) -> (f64, f64) {
 
 fn fit(xtr: &[Vec<f32>], ytr: &[usize], xva: &[Vec<f32>], yva: &[usize], xte: &[Vec<f32>], yte: &[usize], v: usize) -> serde_json::Value {
     let mut best = (f64::MAX, 0.0, 0.0);
-    for &l in &[0.1, 1.0, 10.0, 100.0, 1000.0] {
+    for &l in &[1.0, 30.0, 1000.0] {
         let w = ridge(xtr, ytr, v, l);
-        for &t in &[2.0, 5.0, 10.0, 20.0, 40.0] {
+        for &t in &[1.0, 3.0, 8.0, 20.0, 50.0] {
             let (ce, _) = eval(&w, xva, yva, t);
             if ce < best.0 { best = (ce, l, t); }
         }
@@ -129,7 +135,9 @@ fn fit(xtr: &[Vec<f32>], ytr: &[usize], xva: &[Vec<f32>], yva: &[usize], xte: &[
 fn main() -> anyhow::Result<()> {
     let a: Vec<String> = std::env::args().collect();
     let c = Connectome::load(std::path::Path::new(&a[1]))?;
-    let text: String = CORPUS.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ");
+    let src = a.get(3).map(|p| std::fs::read_to_string(p).unwrap()).unwrap_or(CORPUS.to_string());
+    let t_tok: f64 = a.get(4).and_then(|x| x.parse().ok()).unwrap_or(10.0);
+    let text: String = src.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ");
     let mut vocab: Vec<char> = text.chars().collect();
     vocab.sort();
     vocab.dedup();
@@ -141,7 +149,7 @@ fn main() -> anyhow::Result<()> {
     let n = ids.len() - 1;
     let (i_va, i_te) = (n * 60 / 100, n * 75 / 100);
     let sh = c.shuffled(101);
-    let mut out = serde_json::json!({"chars": n, "vocab": v});
+    let mut out = serde_json::json!({"chars": n, "vocab": v, "t_tok_ms": t_tok});
     // n-gramas (entrenados en train+val) como referencia
     for k in 1..=3usize {
         let mut cnt: std::collections::HashMap<Vec<usize>, Vec<f64>> = Default::default();
@@ -157,8 +165,28 @@ fn main() -> anyhow::Result<()> {
         out[format!("ngram_{k}")] = serde_json::json!({"test_ce": ce / (n - i_te) as f64, "test_acc": hit as f64 / (n - i_te) as f64});
     }
     for (name, conn) in [("real", &c), ("barajado", &sh)] {
-        let ro = probe(conn, &jo, 1024);
-        let (res, brn) = features(conn, &ids[..n], &e, v, &jo, &ro, 11);
+        // lectura: neuronas no-JO más activas durante un pase de sonda con el propio texto de entrenamiento
+        let all: Vec<u32> = (0..conn.n as u32).collect();
+        let _ = &all;
+        let ro = {
+            let mut b = Brain::new(conn, Params { dt: 0.5, ..Params::default() });
+            let mut rng = ChaCha8Rng::seed_from_u64(5);
+            let nin = jo.len();
+            let js: HashSet<u32> = jo.iter().cloned().collect();
+            let mut tot = vec![0u32; conn.n];
+            for &x in &ids[..i_va.min(3000)] {
+                let drive: Vec<(u32, f32)> = (0..nin).map(|j| (jo[j], R_MAX / (1.0 + (-(e[x * nin + j] - 1.5)).exp()))).collect();
+                b.reset_counts();
+                b.run(t_tok, &drive, &mut rng);
+                for (t, &k) in tot.iter_mut().zip(&b.counts) { *t += k; }
+            }
+            let mut a: Vec<(u32, u32)> = tot.iter().enumerate().filter(|(i, &k)| k >= 3 && !js.contains(&(*i as u32))).map(|(i, &k)| (i as u32, k)).collect();
+            a.sort_by(|x, y| y.1.cmp(&x.1));
+            a.truncate(N_RO);
+            a.into_iter().map(|x| x.0).collect::<Vec<u32>>()
+        };
+        let _ = probe;
+        let (res, brn) = features(conn, &ids[..n], &e, v, &jo, &ro, 11, t_tok);
         let y: Vec<usize> = ids[1..=n].to_vec();
         let split = |xs: &Vec<Vec<f32>>| (xs[..i_va].to_vec(), xs[i_va..i_te].to_vec(), xs[i_te..].to_vec());
         let comb: Vec<Vec<f32>> = res.iter().zip(&brn).map(|(a, b)| a.iter().chain(b.iter()).cloned().collect()).collect();

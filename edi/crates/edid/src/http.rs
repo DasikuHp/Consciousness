@@ -65,6 +65,22 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
         ("GET", "/group") => respond(&mut s, "application/octet-stream", &sh.group),
         ("GET", "/region") => respond(&mut s, "application/octet-stream", &sh.region),
         ("GET", "/backbone") => respond(&mut s, "application/octet-stream", &sh.backbone),
+        ("GET", "/skel") => {
+            // [n_seg u32][pad u32][seg i16 × 6n][pad][neurona u32 × n] — morfología real (Schlegel et al. 2024)
+            let lod = if q("lod").as_deref() == Some("small") { "small" } else { "full" };
+            let dir = std::env::var("EDI_BRAIN").unwrap_or("/usr/share/edi/brain/flywire783".into());
+            match (std::fs::read(format!("{dir}/skel_{lod}.i16")), std::fs::read(format!("{dir}/skel_{lod}.u32"))) {
+                (Ok(seg), Ok(nid)) => {
+                    let n = (nid.len() / 4) as u32;
+                    let pad = (4 - seg.len() % 4) % 4;
+                    let mut b = Vec::with_capacity(8 + seg.len() + pad + nid.len());
+                    b.extend_from_slice(&n.to_le_bytes()); b.extend_from_slice(&0u32.to_le_bytes());
+                    b.extend_from_slice(&seg); b.extend(std::iter::repeat(0u8).take(pad)); b.extend_from_slice(&nid);
+                    respond(&mut s, "application/octet-stream", &b)
+                }
+                _ => { let _ = s.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"); }
+            }
+        }
         ("GET", "/widget") => respond(&mut s, "text/html; charset=utf-8", WIDGET.as_bytes()),
         ("GET", "/face") => { let b = sh.face.lock().unwrap().to_string(); respond(&mut s, "application/json", b.as_bytes()) }
         ("GET", "/activity") => {
@@ -72,10 +88,11 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
             let v: Vec<_> = a.iter().map(|(t, r)| serde_json::json!({"t": t, "r": r})).collect();
             respond(&mut s, "application/json", serde_json::json!(v).to_string().as_bytes())
         }
-        ("GET", p) if p.starts_with("/face/") && p.ends_with(".png") && !p.contains("..") => {
+        ("GET", p) if p.starts_with("/face/") && (p.ends_with(".png") || p.ends_with(".svg")) && !p.contains("..") => {
+            let ct = if p.ends_with(".svg") { "image/svg+xml" } else { "image/png" };
             let dir = std::env::var("EDI_ASSETS").unwrap_or("/usr/share/edi/face".into());
             match std::fs::read(format!("{dir}/{}", &p[6..])) {
-                Ok(b) => { let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {}\r\nCache-Control: max-age=86400\r\n\r\n", b.len()); let _ = s.write_all(&b); }
+                Ok(b) => { let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: {ct}\r\nContent-Length: {}\r\nCache-Control: max-age=86400\r\n\r\n", b.len()); let _ = s.write_all(&b); }
                 Err(_) => { let _ = s.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"); }
             }
         }
