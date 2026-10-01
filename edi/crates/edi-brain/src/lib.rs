@@ -117,7 +117,20 @@ pub struct Brain<'c> {
     ev: f32,
     kvg: f32,
     rfc_steps: u32,
+    /// Motor por eventos: solo se calculan las neuronas fuera del reposo (como el cerebro,
+    /// donde solo un 1–2 % está activo). Una neurona en reposo exacto (v=v0, g=0) no cambia,
+    /// así que saltarla es exacto; vuelve a la lista cuando recibe entrada.
+    pub event_driven: bool,
+    active: Vec<u32>,
+    is_active: Vec<bool>,
+    ring_s: Vec<Vec<(u32, f32)>>,
+    /// Neuronas actualizadas en el último paso (coste real de cómputo).
+    pub last_updates: usize,
+    /// Umbral de reposo (mV): por debajo, la neurona se fija en (v0, 0) y sale de la lista activa.
+    pub eps: f32,
 }
+
+
 
 impl<'c> Brain<'c> {
     pub fn new(c: &'c Connectome, p: Params) -> Self {
@@ -129,7 +142,95 @@ impl<'c> Brain<'c> {
             ring: vec![vec![0.0; c.n]; d + 1], step: 0, spikes: Vec::new(), counts: vec![0; c.n],
             eg: eg as f32, ev: ev as f32, kvg: kvg as f32,
             rfc_steps: (p.t_rfc / p.dt).round() as u32, p,
+            event_driven: true, active: Vec::new(), is_active: vec![false; c.n], ring_s: vec![Vec::new(); d + 1], last_updates: 0, eps: 1e-2,
         }
+    }
+
+    #[inline]
+    fn activate(&mut self, i: usize) {
+        if !self.is_active[i] {
+            self.is_active[i] = true;
+            self.active.push(i as u32);
+        }
+    }
+
+    /// Fracción de neuronas activas ahora mismo.
+    pub fn active_fraction(&self) -> f32 {
+        if self.event_driven { self.active.len() as f32 / self.c.n as f32 } else { 1.0 }
+    }
+
+    /// Paso por eventos (mismo orden de operaciones que el denso: entrega → integración → umbral →
+    /// propagación → Poisson → reset).
+    fn step_event(&mut self, drive: &[(u32, f32)], rng: &mut ChaCha8Rng) {
+        let (v0, vth) = (self.p.v0 as f32, self.p.v_th as f32);
+        let (eg, ev, kvg) = (self.eg, self.ev, self.kvg);
+        let d = self.ring_s.len();
+        let slot = (self.step as usize) % d;
+        let arriving = std::mem::take(&mut self.ring_s[slot]);
+        for &(i, x) in &arriving {
+            self.g[i as usize] += x;
+            self.activate(i as usize);
+        }
+        let mut buf = arriving;
+        buf.clear();
+        self.spikes.clear();
+        self.last_updates = self.active.len();
+        let mut k = 0;
+        while k < self.active.len() {
+            let i = self.active[k] as usize;
+            if self.refr[i] > 0 {
+                self.refr[i] -= 1;
+                k += 1;
+                continue;
+            }
+            let (u, g) = (self.v[i] - v0, self.g[i]);
+            self.v[i] = v0 + u * ev + g * kvg;
+            self.g[i] = g * eg;
+            if self.v[i] > vth {
+                self.spikes.push(i as u32);
+            } else if (self.v[i] - v0).abs() < self.eps && self.g[i].abs() < self.eps {
+                self.v[i] = v0;
+                self.g[i] = 0.0;
+                self.is_active[i] = false;
+                self.active.swap_remove(k);
+                continue;
+            }
+            k += 1;
+        }
+        self.spikes.sort_unstable();
+        let w_syn = self.p.w_syn as f32;
+        for si in 0..self.spikes.len() {
+            let s = self.spikes[si] as usize;
+            for e in self.c.row_ptr[s] as usize..self.c.row_ptr[s + 1] as usize {
+                let kk = self.c.w[e];
+                let eff = match self.p.p_release {
+                    None => kk as f32,
+                    Some(pr) => {
+                        let n = kk.unsigned_abs() as u64;
+                        let rel = Binomial::new(n, pr).map(|b| b.sample(rng)).unwrap_or(0);
+                        kk.signum() as f32 * rel as f32 / pr as f32
+                    }
+                };
+                buf.push((self.c.col[e], eff * w_syn));
+            }
+        }
+        self.ring_s[slot] = buf;
+        let jump = (self.p.w_syn * self.p.f_poi) as f32;
+        let dt_s = (self.p.dt / 1000.0) as f32;
+        for &(i, hz) in drive {
+            if rng.gen::<f32>() < hz * dt_s {
+                self.v[i as usize] += jump;
+                self.activate(i as usize);
+            }
+        }
+        for si in 0..self.spikes.len() {
+            let s = self.spikes[si] as usize;
+            self.v[s] = self.p.v_rst as f32;
+            self.g[s] = 0.0;
+            self.refr[s] = self.rfc_steps;
+            self.counts[s] += 1;
+        }
+        self.step += 1;
     }
 
     pub fn reset_counts(&mut self) {
@@ -138,6 +239,10 @@ impl<'c> Brain<'c> {
 
     /// Avanza un paso dt. `drive`: (neurona, tasa Hz) con entrada Poisson sobre v.
     pub fn step(&mut self, drive: &[(u32, f32)], rng: &mut ChaCha8Rng) {
+        if self.event_driven {
+            return self.step_event(drive, rng);
+        }
+        self.last_updates = self.c.n;
         let (v0, vth) = (self.p.v0 as f32, self.p.v_th as f32);
         let (eg, ev, kvg) = (self.eg, self.ev, self.kvg);
         let d = self.ring.len();
