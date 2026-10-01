@@ -42,12 +42,14 @@ def segments(ni, node, parent, xyz, stride):
     pos_ = np.clip(pos_, 0, len(skey) - 1)
     prow = np.where(has_p & (skey[pos_] == pkey), order[pos_], -1)
     keep = (prow < 0) | (node % stride == 0)
-    anc = prow.copy()
-    for _ in range(2 * stride + 50):
-        m = (anc >= 0) & ~keep[np.maximum(anc, 0)]
-        if not m.any():
+    # primer nodo conservado en-o-por-encima de cada nodo (pointer jumping, O(log profundidad))
+    up = np.where(keep, np.arange(len(node)), prow)
+    for _ in range(40):
+        nxt = np.where(up >= 0, up[np.maximum(up, 0)], -1)
+        if np.array_equal(nxt, up):
             break
-        anc[m] = prow[anc[m]]
+        up = nxt
+    anc = np.where(prow >= 0, up[np.maximum(prow, 0)], -1)
     sel = np.flatnonzero(keep & (anc >= 0))
     seg = np.concatenate([xyz[sel], xyz[anc[sel]]], 1)
     return seg, ni[sel].astype(np.uint32)
