@@ -4,7 +4,7 @@ Fuente: Schlegel et al., Nature 2024, suplemento (Zenodo 10877326, CC-BY-4.0):
 `sk_lod1_783_healed_ds2.parquet` — esqueleto (node_id, parent_id, radius, x, y, z en nm) de cada neurona.
 
 Simplificación honesta: se conservan TODOS los puntos de ramificación, puntas y raíz, y además
-un nodo de cada `STRIDE` a lo largo de cada rama; cada nodo conservado se une a su ancestro
+los nodos con node_id múltiplo de `STRIDE`; cada nodo conservado se une a su ancestro
 conservado más cercano. La topología y el recorrido son reales; solo se reduce la densidad de vértices.
 
 Salida (data/brain/flywire783/):
@@ -32,71 +32,58 @@ lo, hi = pos[ok].min(0), pos[ok].max(0)
 ctr = (lo + hi) / 2
 sc = float(max((hi - lo).max(), 1.0) / 2)
 
-def simplify(node, parent, stride):
-    """Devuelve pares (hijo, ancestro) de nodos conservados."""
-    idx = {int(n): k for k, n in enumerate(node)}
-    par = np.array([idx.get(int(p), -1) for p in parent])
-    nchild = np.bincount(par[par >= 0], minlength=len(node))
-    keep = (par < 0) | (nchild != 1)
-    # profundidad a lo largo del árbol para muestrear cada `stride`
-    order = np.argsort(par >= 0, kind="stable")  # raíces primero
-    depth = np.full(len(node), -1)
-    stack = [k for k in range(len(node)) if par[k] < 0]
-    children = [[] for _ in range(len(node))]
-    for k, p in enumerate(par):
-        if p >= 0:
-            children[p].append(k)
-    for r in stack:
-        depth[r] = 0
-    while stack:
-        k = stack.pop()
-        for ch in children[k]:
-            depth[ch] = depth[k] + 1
-            stack.append(ch)
-    keep |= (depth % stride == 0)
-    # ancestro conservado más cercano
-    anc = np.full(len(node), -1)
-    stack = [k for k in range(len(node)) if par[k] < 0]
-    while stack:
-        k = stack.pop()
-        for ch in children[k]:
-            anc[ch] = k if keep[k] else anc[k]
-            stack.append(ch)
-    kids = np.flatnonzero(keep & (anc >= 0))
-    _ = order
-    return kids, anc[kids]
+def segments(ni, node, parent, xyz, stride):
+    """Vectorizado sobre un bloque de neuronas completas. Devuelve (seg[n,6], neurona[n])."""
+    key = (ni.astype(np.int64) << 32) | node.astype(np.int64)
+    order = np.argsort(key, kind="stable")
+    skey = key[order]
+    has_p = parent >= 0
+    pkey = (ni.astype(np.int64) << 32) | np.where(has_p, parent, 0).astype(np.int64)
+    pos_ = np.searchsorted(skey, pkey)
+    pos_ = np.clip(pos_, 0, len(skey) - 1)
+    prow = np.where(has_p & (skey[pos_] == pkey), order[pos_], -1)
+    nchild = np.bincount(prow[prow >= 0], minlength=len(node))
+    keep = (prow < 0) | (nchild != 1) | (node % stride == 0)
+    anc = prow.copy()
+    for _ in range(4 * stride + 50):
+        m = (anc >= 0) & ~keep[np.maximum(anc, 0)]
+        if not m.any():
+            break
+        anc[m] = prow[anc[m]]
+    sel = np.flatnonzero(keep & (anc >= 0))
+    seg = np.concatenate([xyz[sel], xyz[anc[sel]]], 1)
+    return seg, ni[sel].astype(np.uint32)
 
 def main():
+    import pandas as pd
     f = pq.ParquetFile(SRC)
+    index = pd.Index(ids)
     out = {lod: ([], []) for lod in LODS}
+    stats = {"rows": 0, "neurons": 0, "unmatched_neurons": 0}
     carry = None
-    stats = {"rows": 0, "neurons": 0}
-    def flush(df):
-        for nid, g in df.groupby("neuron", sort=False):
-            i = id2i.get(int(nid))
-            if i is None:
-                continue
-            xyz = ((g[["x", "y", "z"]].to_numpy(np.float32) - ctr) / sc) * np.array([1, -1, 1], np.float32)
-            node, parent = g["node_id"].to_numpy(), g["parent_id"].to_numpy()
-            for lod, stride in LODS.items():
-                a, b = simplify(node, parent, stride)
-                if len(a) == 0:
-                    continue
-                seg = np.stack([xyz[a], xyz[b]], 1).reshape(-1, 6)
-                out[lod][0].append(np.clip(seg * Q, -32767, 32767).astype(np.int16))
-                out[lod][1].append(np.full(len(a), i, np.uint32))
-            stats["neurons"] += 1
-    for rg in range(f.metadata.num_row_groups):
-        df = f.read_row_group(rg).to_pandas()
-        stats["rows"] += len(df)
+    def flush(t):
+        ni = index.get_indexer(t["neuron"])
+        ok_ = ni >= 0
+        stats["unmatched_neurons"] += int(len(np.unique(t["neuron"][~ok_])))
+        stats["neurons"] += int(len(np.unique(ni[ok_])))
+        xyz = ((np.stack([t["x"], t["y"], t["z"]], 1)[ok_] - ctr) / sc) * np.array([1, -1, 1], np.float32)
+        for lod, stride in LODS.items():
+            seg, nid = segments(ni[ok_], t["node_id"][ok_], t["parent_id"][ok_], xyz.astype(np.float32), stride)
+            out[lod][0].append(np.clip(seg * Q, -32767, 32767).astype(np.int16))
+            out[lod][1].append(nid)
+    cols = ["node_id", "parent_id", "x", "y", "z", "neuron"]
+    for b in f.iter_batches(batch_size=6_000_000, columns=cols):
+        t = {c: b.column(c).to_numpy() for c in cols}
         if carry is not None:
-            import pandas as pd
-            df = pd.concat([carry, df])
-        last = df["neuron"].iloc[-1]
-        carry = df[df["neuron"] == last]
-        flush(df[df["neuron"] != last])
-        print(f"grupo {rg + 1}/{f.metadata.num_row_groups} · neuronas {stats['neurons']}", file=sys.stderr, flush=True)
-    if carry is not None:
+            t = {c: np.concatenate([carry[c], t[c]]) for c in cols}
+        last = t["neuron"][-1]
+        cut = len(t["neuron"]) - int(np.argmax(t["neuron"][::-1] != last)) if (t["neuron"] != last).any() else 0
+        carry = {c: t[c][cut:] for c in cols}
+        if cut:
+            flush({c: t[c][:cut] for c in cols})
+        stats["rows"] += int(b.num_rows)
+        print(f"filas {stats['rows']:,} · neuronas {stats['neurons']:,}", file=sys.stderr, flush=True)
+    if carry is not None and len(carry["neuron"]):
         flush(carry)
     meta = {"source": "Schlegel et al. 2024, Zenodo 10877326 (CC-BY-4.0), sk_lod1_783_healed_ds2",
             "quant": Q, "frame": "igual que pos.f32 normalizado por edid (centro/semiescala de somas, y invertida)",
