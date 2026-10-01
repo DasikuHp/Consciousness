@@ -128,6 +128,20 @@ pub struct Brain<'c> {
     pub last_updates: usize,
     /// Umbral de reposo (mV): por debajo, la neurona se fija en (v0, 0) y sale de la lista activa.
     pub eps: f32,
+    /// Ganancia plástica por arista (estado aprendido, separado de la anatomía inmutable).
+    pub edge_gain: Option<Vec<f32>>,
+    /// Depresión sináptica a corto plazo (Tsodyks–Markram, presináptica): (U, τ_rec ms).
+    /// Hipótesis de parámetros; evita la ignición epiléptica del LIF puro. Cálculo perezoso:
+    /// solo se actualiza cuando la neurona dispara (coste ~0).
+    pub std_dep: Option<(f32, f32)>,
+    res: Vec<f32>,
+    last_spike_step: Vec<u64>,
+    /// Adaptación de frecuencia por umbral (Δθ mV por spike, τ ms). Hipótesis de parámetros.
+    pub sfa: Option<(f32, f32)>,
+    /// Desplazamiento de umbral por neurona (plasticidad homeostática intrínseca; estado aprendido).
+    pub thr_offset: Option<Vec<f32>>,
+    theta: Vec<f32>,
+    theta_step: Vec<u64>,
 }
 
 
@@ -142,7 +156,7 @@ impl<'c> Brain<'c> {
             ring: vec![vec![0.0; c.n]; d + 1], step: 0, spikes: Vec::new(), counts: vec![0; c.n],
             eg: eg as f32, ev: ev as f32, kvg: kvg as f32,
             rfc_steps: (p.t_rfc / p.dt).round() as u32, p,
-            event_driven: true, active: Vec::new(), is_active: vec![false; c.n], ring_s: vec![Vec::new(); d + 1], last_updates: 0, eps: 1e-2,
+            event_driven: true, active: Vec::new(), is_active: vec![false; c.n], ring_s: vec![Vec::new(); d + 1], last_updates: 0, eps: 1e-2, edge_gain: None, std_dep: None, res: vec![1.0; c.n], last_spike_step: vec![0; c.n], sfa: None, thr_offset: None, theta: vec![0.0; c.n], theta_step: vec![0; c.n],
         }
     }
 
@@ -186,7 +200,17 @@ impl<'c> Brain<'c> {
             let (u, g) = (self.v[i] - v0, self.g[i]);
             self.v[i] = v0 + u * ev + g * kvg;
             self.g[i] = g * eg;
-            if self.v[i] > vth {
+            let th = if let Some((_, tau)) = self.sfa {
+                if self.theta[i] > 0.0 {
+                    let dts = (self.step - self.theta_step[i]) as f32 * self.p.dt as f32;
+                    self.theta[i] *= (-dts / tau).exp();
+                    self.theta_step[i] = self.step;
+                    if self.theta[i] < 1e-3 { self.theta[i] = 0.0; }
+                }
+                self.theta[i]
+            } else { 0.0 };
+            let off = self.thr_offset.as_ref().map(|o| o[i]).unwrap_or(0.0);
+            if self.v[i] > vth + th + off {
                 self.spikes.push(i as u32);
             } else if (self.v[i] - v0).abs() < self.eps && self.g[i].abs() < self.eps {
                 self.v[i] = v0;
@@ -201,6 +225,14 @@ impl<'c> Brain<'c> {
         let w_syn = self.p.w_syn as f32;
         for si in 0..self.spikes.len() {
             let s = self.spikes[si] as usize;
+            let mut eff_std = 1.0f32;
+            if let Some((u, tau)) = self.std_dep {
+                let dt_ms = (self.step - self.last_spike_step[s]) as f32 * self.p.dt as f32;
+                let x = 1.0 - (1.0 - self.res[s]) * (-dt_ms / tau).exp();
+                eff_std = x;               // eficacia relativa a recursos llenos (U·x / U·1)
+                self.res[s] = x - u * x;   // se consume la fracción U
+                self.last_spike_step[s] = self.step;
+            }
             for e in self.c.row_ptr[s] as usize..self.c.row_ptr[s + 1] as usize {
                 let kk = self.c.w[e];
                 let eff = match self.p.p_release {
@@ -211,7 +243,8 @@ impl<'c> Brain<'c> {
                         kk.signum() as f32 * rel as f32 / pr as f32
                     }
                 };
-                buf.push((self.c.col[e], eff * w_syn));
+                let gain = self.edge_gain.as_ref().map(|g| g[e]).unwrap_or(1.0);
+                buf.push((self.c.col[e], eff * w_syn * gain * eff_std));
             }
         }
         self.ring_s[slot] = buf;
@@ -229,6 +262,7 @@ impl<'c> Brain<'c> {
             self.g[s] = 0.0;
             self.refr[s] = self.rfc_steps;
             self.counts[s] += 1;
+            if let Some((d, _)) = self.sfa { self.theta[s] += d; self.theta_step[s] = self.step; }
         }
         self.step += 1;
     }

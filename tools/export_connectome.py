@@ -55,10 +55,20 @@ groups = {
     "dan": idx(a.cell_class.astype(str).eq("DAN")),
 }
 id2i = {int(r): i for i, r in enumerate(ids)}
+ct = a.cell_type.astype(str)
+for t in ["ORN_DA1", "ORN_VA1d", "ORN_DL3", "ORN_VA1v", "ORN_VL1", "ORN_VM4", "ORN_VL2a", "ORN_DL1"]:
+    groups[t.lower()] = idx(ct.eq(t))
+orn_types = sorted(t for t in ct.unique() if isinstance(t, str) and t.startswith("ORN_"))
+for t in orn_types:
+    groups[t.lower()] = idx(ct.eq(t))
+groups["_orn_types"] = []
+meta_orn = [t.lower() for t in orn_types]
+groups["dan_pam"] = idx(a.cell_class.astype(str).eq("DAN") & ct.str.startswith("PAM"))
+groups["dan_ppl1"] = idx(a.cell_class.astype(str).eq("DAN") & ct.str.startswith("PPL1"))
 groups["mn9"] = [id2i[720575940660219265]]
 sugar = json.loads((ROOT / "experiments/phase0/ids_783.json").read_text())["sugar"]
 groups["sugar_shiu"] = [id2i[s] for s in sugar]
-meta = {"source": "FlyWire v783 via Shiu et al. Connectivity_783.parquet", "n": n, "n_edges": int(len(con)),
+meta = {"orn_types": meta_orn, "source": "FlyWire v783 via Shiu et al. Connectivity_783.parquet", "n": n, "n_edges": int(len(con)),
         "groups": groups, "group_sizes": {k: len(v) for k, v in groups.items()}}
 (OUT / "meta.json").write_text(json.dumps(meta))
 print(json.dumps({k: meta[k] for k in ("n", "n_edges")}), meta["group_sizes"])
