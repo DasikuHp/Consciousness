@@ -9,11 +9,13 @@
 
 mod face;
 mod http;
+mod learn;
 mod mood;
 mod senses;
 
 use anyhow::Result;
 use edi_brain::{entropy::{Entropy, Source}, Brain, Connectome, Params};
+use edi_rosa::{Rosa, Rosa1Bit, Vocab};
 use edi_samn::{Samn, EMB};
 use http::Shared;
 use std::collections::{HashSet, VecDeque};
@@ -33,6 +35,13 @@ fn now() -> u64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs
 fn env<T: std::str::FromStr>(k: &str, d: T) -> T { std::env::var(k).ok().and_then(|s| s.parse().ok()).unwrap_or(d) }
 
 struct Vital { age_ticks: u64, energy: f64, sleep_pressure: f64, asleep: bool, spikes_last: usize, births: u64 }
+
+fn save_learned(dir: &PathBuf, b: &Brain, mb: &learn::Mb, l: &Learned) -> Result<()> {
+    std::fs::write(dir.join("kc_mbon.f32"), mb.save_gains(b.edge_gain.as_ref().unwrap()))?;
+    std::fs::write(dir.join("learned.tmp"), serde_json::to_vec(l)?)?;
+    std::fs::rename(dir.join("learned.tmp"), dir.join("learned.json"))?;
+    Ok(())
+}
 
 fn save(dir: &PathBuf, b: &Brain, v: &Vital, m: &Samn) -> Result<()> {
     let mut raw = Vec::with_capacity(b.v.len() * 8 + 32);
@@ -67,7 +76,14 @@ fn embed(counts: &[u32], dn: &[u32]) -> [f32; EMB] {
     e
 }
 
-fn fnv(s: &str) -> u64 { s.bytes().fold(0xcbf29ce484222325, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3)) }
+use learn::fnv;
+
+/// Lo que EDI aprende fuera del conectoma: secuencias (ROSA), valencias y sinapsis KC→MBON.
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+struct Learned { vocab: Vocab, seq: Rosa, bits: Rosa1Bit, valence: learn::Valence }
+
+const POS: [&str; 8] = ["bien", "genial", "bravo", "gracias", "perfecto", "guay", "buena", "bueno"];
+const NEG: [&str; 6] = ["mal", "malo", "mala", "feo", "basta", "error"];
 
 fn positions(dir: &PathBuf) -> (Vec<u8>, f32) {
     let raw = std::fs::read(dir.join("pos.f32")).unwrap_or_default();
@@ -95,6 +111,26 @@ fn main() -> Result<()> {
     let c = Connectome::load(&brain_dir)?;
     let mut brain = Brain::new(&c, Params { dt: 0.5, p_release: Some(0.5), ..Params::default() });
     let mut vital = Vital { age_ticks: 0, energy: 1.0, sleep_pressure: 0.0, asleep: false, spikes_last: 0, births: 0 };
+    // Mecanismos validados (experiments/efficiency, experiments/learning): agotamiento sináptico,
+    // adaptación, umbrales homeostáticos de KC, dopamina moduladora y plasticidad KC→MBON.
+    brain.std_dep = Some((0.3, 100.0));
+    brain.sfa = Some((2.0, 200.0));
+    if let Ok(raw) = std::fs::read(brain_dir.join("kc_thr_offset.f32")) {
+        if raw.len() == c.n * 4 { brain.thr_offset = Some(raw.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().unwrap())).collect()); }
+    }
+    let mut mb = learn::Mb::new(&c);
+    let mut gains = mb.gains(&c);
+    if let Ok(raw) = std::fs::read(state.join("kc_mbon.f32")) { mb.load_gains(&raw, &mut gains); }
+    brain.edge_gain = Some(gains);
+    let region_f: Vec<u8> = std::fs::read(brain_dir.join("region.u8")).ok().filter(|r| r.len() == c.n).unwrap_or(vec![0; c.n]);
+    // Atención: sin cámara ni píxeles, el lóbulo óptico no recibe nada → fuera del foco (prueba 3).
+    let focus_ol = std::env::var("EDI_FOCUS").as_deref() != Ok("all");
+    if focus_ol { brain.focus = Some(region_f.iter().map(|&r| r != 1).collect()); }
+    let mut learned: Learned = std::fs::read(state.join("learned.json")).ok().and_then(|r| serde_json::from_slice(&r).ok()).unwrap_or_default();
+    if learned.seq.window == 0 { learned.seq = Rosa::new(200_000); }
+    learned.seq.rebuild();
+    if learned.bits.ch.len() != 8 { learned.bits = Rosa1Bit::new(8, 20_000); }
+    for ch in learned.bits.ch.iter_mut() { ch.rebuild(); }
     let resumed = restore(&state, &mut brain, &mut vital);
     vital.births += 1;
     let samn = if resumed { Samn::load(&state.join("samn.json")).unwrap_or_else(|_| Samn::new()) } else { Samn::new() };
@@ -104,7 +140,7 @@ fn main() -> Result<()> {
         for &i in c.group(name) { group[i as usize] = gid; }
     }
     let (pos, um_per_unit) = positions(&brain_dir);
-    let region: Vec<u8> = std::fs::read(brain_dir.join("region.u8")).ok().filter(|r| r.len() == c.n).unwrap_or(vec![0; c.n]);
+    let region = region_f.clone();
     const RN: [&str; 8] = ["otras", "lóbulo óptico", "cuerpo fungiforme", "complejo central", "lóbulo antenal", "cuerno lateral", "SEZ", "vía auditiva"];
     let backbone: Vec<u8> = {
         let valid = |i: usize| f32::from_le_bytes(pos[i * 12..i * 12 + 4].try_into().unwrap()).is_finite();
@@ -125,7 +161,7 @@ fn main() -> Result<()> {
     let sh = Arc::new(Shared {
         state: Mutex::new(serde_json::json!({})), spikes: Mutex::new(VecDeque::new()), samn: Mutex::new(samn),
         events: Mutex::new(VecDeque::new()), inbox: Mutex::new(vec![]), force_sleep: Default::default(), pos, group,
-        region: region.clone(), backbone, activity: Mutex::new(VecDeque::new()), face: Mutex::new(serde_json::json!({})),
+        region: region.clone(), backbone, learn: Mutex::new(serde_json::json!({})), reward: Mutex::new(0.0), seq: Mutex::new((0, vec![], vec![], vec![])), activity: Mutex::new(VecDeque::new()), face: Mutex::new(serde_json::json!({})),
     });
     let mut say = |sh: &Shared, t: u64, s: String| {
         let line = serde_json::json!({"t": t, "ev": s});
@@ -147,12 +183,23 @@ fn main() -> Result<()> {
     let niri_ok = niri_dir.is_dir();
     let (mut ep_start, mut last_event_tick, mut emb_avg) = (0u64, 0u64, [0f32; EMB]);
     let mut ticks_run = 0u64;
+    let realtime = std::env::var("EDI_REALTIME").as_deref() != Ok("0");
+    let mut load = 0f64; // fracción del tick real usada en calcular
     let mut speed = 0.0f64;
     let mut mood = face::Mood::new(vital.age_ticks);
     let mut spike_avg = 0f64;
     let (mut reg_hist, n_reg): (VecDeque<[u32; 8]>, [u32; 8]) = (VecDeque::new(), {
         let mut k = [0u32; 8]; for &r in &region { k[r as usize % 8] += 1; } k });
     let mut metrics = serde_json::json!({});
+    // olfato de conceptos: uno cada vez, 8 ticks (400 ms); se mide su MBON para la valencia
+    let mut smell_q: VecDeque<(String, f32)> = VecDeque::new();
+    let mut smelling: Option<(String, Vec<(u32, f32)>, u32, Vec<f32>)> = None;
+    let mut kc_hits = 0usize;
+    let (mut da_left, mut da_sign, mut da_events, mut da_changes) = (0u32, 0f32, 0u64, 0u64);
+    let mut expect: Option<u32> = None; // predicción ROSA del siguiente concepto
+    let (mut seq_hit, mut seq_tot, mut bits_hit, mut bits_tot) = (0u64, 0u64, 0u64, 0u64);
+    let mut kc_frac = 0f64;
+    let mut last_smell = String::new();
 
     while ticks_run < max_ticks {
         let t0 = Instant::now();
@@ -182,7 +229,17 @@ fn main() -> Result<()> {
                 let w = w.to_lowercase();
                 let h = fnv(&w);
                 let set: Vec<(u32, f32)> = (0..24).map(|k| (jo[((h >> 3).wrapping_add(k * 2654435761) as usize) % jo.len()], 150.0)).collect();
-                boosts.push((set, 8));
+                // predicción (ROSA): lo esperado se atenúa, la sorpresa pasa entera (prueba 4)
+                let tok = learned.vocab.id(&format!("OYE:{w}"));
+                let hit = expect == Some(tok);
+                seq_tot += 1; if hit { seq_hit += 1; }
+                let gain = if hit { 0.3 } else { 1.0 };
+                boosts.push((set.into_iter().map(|(i, hz)| (i, hz * gain)).collect(), 8));
+                if smell_q.len() < 6 { smell_q.push_back((format!("OYE:{w}"), gain)); }
+                let p = learned.seq.push(tok);
+                expect = p.map(|p| p.token);
+                if POS.contains(&w.as_str()) { da_left = 6; da_sign = 1.0; }
+                if NEG.contains(&w.as_str()) { da_left = 6; da_sign = -1.0; }
                 new_events.push((format!("OYE:{w}"), 0.3));
                 let (known, assoc) = {
                     let mut m = sh.samn.lock().unwrap();
@@ -191,9 +248,21 @@ fn main() -> Result<()> {
                         None => (false, vec![]),
                     }
                 };
-                mood.stim(tk, face::Stim::Word { w: w.clone(), known, assoc });
+                let val = learned.valence.of(&format!("OYE:{w}"));
+                if hit && val.map_or(true, |v| v.abs() <= 0.025) { mood.stim(tk, face::Stim::Expected(w.clone())); }
+                else { mood.stim(tk, face::Stim::Word { w: w.clone(), known, assoc, val }); }
                 words.push(w);
             }
+        }
+
+        let r = std::mem::take(&mut *sh.reward.lock().unwrap());
+        if r != 0.0 { da_left = 6; da_sign = r.signum(); }
+        for (l, _) in new_events.iter().filter(|(l, _)| !l.starts_with("OYE:") && !l.starts_with("ESTRES") && !l.starts_with("PROC:")) {
+            let tok = learned.vocab.id(l);
+            let hit = expect == Some(tok);
+            seq_tot += 1; if hit { seq_hit += 1; }
+            expect = learned.seq.push(tok).map(|p| p.token);
+            if smell_q.len() < 6 { smell_q.push_back((l.clone(), if hit { 0.3 } else { 1.0 })); }
         }
 
         // sueño: consolidar, soñar, olvidar
@@ -211,14 +280,47 @@ fn main() -> Result<()> {
         } else {
             let mut drive = baseline.clone();
             boosts.retain_mut(|(set, left)| { drive.extend(set.iter().cloned()); *left -= 1; *left > 0 });
+            if smelling.is_none() {
+                if let Some((l, g)) = smell_q.pop_front() { let od = mb.odor(&l).into_iter().map(|(i, hz)| (i, hz * g)).collect(); smelling = Some((l, od, 8, vec![])); }
+            }
+            if let Some((_, od, _, _)) = &smelling { drive.extend(od.iter().cloned()); }
+            if da_left > 0 {
+                let d = if da_sign > 0.0 { &mb.pam } else { &mb.ppl1 };
+                drive.extend(d.iter().map(|&i| (i, learn::DAN_HZ)));
+                da_left -= 1;
+                if da_left == 0 { da_events += 1; }
+            }
             let mut rng = entropy.rng()?;
             brain.reset_counts();
             brain.run(TICK_BIO_MS, &drive, &mut rng);
             vital.spikes_last = brain.counts.iter().map(|&x| x as usize).sum();
+            {
+                let counts = std::mem::take(&mut brain.counts);
+                da_changes += mb.learn(&counts, brain.edge_gain.as_mut().unwrap()) as u64;
+                kc_frac = 0.95 * kc_frac + 0.05 * mb.kc_active(&counts) as f64 / mb.n_kc() as f64;
+                if let Some((l, _, left, acc)) = &mut smelling {
+                    mb.kc_counts(&counts, acc);
+                    *left -= 1;
+                    if *left == 0 {
+                        kc_hits = acc.iter().filter(|&&x| x > 0.0).count();
+                        learned.valence.now.insert(l.clone(), mb.valence(acc, brain.edge_gain.as_ref().unwrap()));
+                        mb.seen(acc);
+                        last_smell = l.clone();
+                        smelling = None;
+                    }
+                }
+                brain.counts = counts;
+            }
             vital.sleep_pressure += 1.0 / sleep_after;
             tick_spikes = brain.counts.iter().enumerate().filter(|(_, &c)| c > 0).map(|(i, _)| i as u32).collect();
             let mut rc = [0u32; 8];
             for &i in &tick_spikes { rc[region[i as usize] as usize % 8] += brain.counts[i as usize]; }
+            if let Some(prev) = reg_hist.back() {
+                // ROSA de 1 bit por región: ¿sube o baja su actividad? Su acierto = predictibilidad del cerebro
+                let bits: Vec<bool> = (0..8).map(|k| rc[k] > prev[k]).collect();
+                let (h, t) = learned.bits.push(&bits);
+                bits_hit += h as u64; bits_tot += t as u64;
+            }
             reg_hist.push_back(rc);
             if reg_hist.len() > 200 { reg_hist.pop_front(); }
             let sp = vital.spikes_last as f64;
@@ -246,6 +348,7 @@ fn main() -> Result<()> {
             let e = embed(&brain.counts, &dn);
             for k in 0..EMB { emb_avg[k] = 0.9 * emb_avg[k] + 0.1 * e[k]; }
             speed = TICK_BIO_MS / (t0.elapsed().as_secs_f64() * 1000.0);
+            load = 0.95 * load + 0.05 / speed;
         }
 
         // memoria episódica real
@@ -280,14 +383,35 @@ fn main() -> Result<()> {
         *sh.state.lock().unwrap() = serde_json::json!({
             "name": "EDI", "age_bio_s": vital.age_ticks as f64 * TICK_BIO_MS / 1000.0, "births": vital.births,
             "asleep": vital.asleep, "energy": vital.energy, "sleep_pressure": vital.sleep_pressure,
-            "spikes_last_tick": vital.spikes_last, "speed_x_realtime": speed, "psi": {"cpu": cpu, "memory": mem},
+            "spikes_last_tick": vital.spikes_last, "speed_x_realtime": speed, "cpu_load_pct": 100.0 * load, "psi": {"cpu": cpu, "memory": mem},
             "memory": {"nodes": nn, "edges": ne}, "neurons": c.n, "synapses_edges": c.meta.n_edges, "metrics": metrics, "face": mood.face, "regions": RN, "um_per_unit": um_per_unit,
         });
-        if vital.age_ticks % SNAPSHOT_EVERY == 0 { let m = sh.samn.lock().unwrap(); save(&state, &brain, &vital, &m)?; }
+        *sh.learn.lock().unwrap() = serde_json::json!({
+            "rosa": {"conceptos_vistos": learned.seq.hist.len(), "vocabulario": learned.vocab.labels.len(), "estados": learned.seq.states(),
+                     "acierto_prediccion": if seq_tot > 0 { seq_hit as f64 / seq_tot as f64 } else { 0.0 },
+                     "espera": expect.map(|t| learned.vocab.label(t).to_string()),
+                     "acierto_1bit_cerebro": if bits_tot > 0 { bits_hit as f64 / bits_tot as f64 } else { 0.0 }},
+            "dopamina": {"refuerzos": da_events, "cambios_sinapticos": da_changes, "sinapsis_kc_mbon_deprimidas": mb.depressed(brain.edge_gain.as_ref().unwrap())},
+            "kc_activas_pct": 100.0 * kc_frac, "oliendo": smelling.as_ref().map(|s| s.0.clone()),
+            "ultimo_olido": {"concepto": last_smell, "kc_activadas": kc_hits, "valencia": learned.valence.of(&last_smell)},
+            "foco": if focus_ol { "sin lóbulo óptico (no hay visión)" } else { "cerebro completo" },
+            "neuronas_por_paso": brain.last_updates,
+        });
+        if let Ok(mut s) = sh.state.lock() { s["learning"] = sh.learn.lock().unwrap().clone(); }
+        {
+            // la sección pública de recuerdos de secuencia (para /recall)
+            let mut st = sh.seq.lock().unwrap();
+            if st.0 != learned.seq.hist.len() { *st = (learned.seq.hist.len(), learned.vocab.labels.clone(), learned.seq.hist[learned.seq.hist.len().saturating_sub(5000)..].to_vec(),
+                learned.vocab.labels.iter().filter_map(|l| learned.valence.of(l).map(|v| (l.clone(), v))).collect()); }
+        }
+        if vital.age_ticks % SNAPSHOT_EVERY == 0 { let m = sh.samn.lock().unwrap(); save(&state, &brain, &vital, &m)?; save_learned(&state, &brain, &mb, &learned)?; }
         if vital.energy < 0.7 { std::thread::sleep(t0.elapsed().mul_f64(1.0 - vital.energy)); }
+        // tiempo biológico = tiempo real (como un ser vivo; y la CPU sobrante queda libre)
+        if realtime { if let Some(r) = Duration::from_millis(TICK_BIO_MS as u64).checked_sub(t0.elapsed()) { std::thread::sleep(r); } }
     }
     let m = sh.samn.lock().unwrap();
     save(&state, &brain, &vital, &m)?;
+    save_learned(&state, &brain, &mb, &learned)?;
     drop(m);
     say(&sh, now(), "pausa".into());
     Ok(())

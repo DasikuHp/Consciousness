@@ -10,7 +10,9 @@ use serde::Serialize;
 pub struct Face { pub id: u8, pub name: &'static str, pub line: String, pub since: u64 }
 
 pub enum Stim {
-    Word { w: String, known: bool, assoc: Vec<String> },
+    Word { w: String, known: bool, assoc: Vec<String>, val: Option<f32> },
+    /// ROSA lo predijo: ya lo esperaba
+    Expected(String),
     Port(u16),
     Proc(String),
     Focus(String),
@@ -44,6 +46,8 @@ impl Mood {
 
     /// Estímulo puntual (tiene prioridad unos segundos).
     pub fn stim(&mut self, t: u64, s: Stim) {
+        // la reacción a lo que le dices no la tapa el eco de su propio cerebro
+        if matches!(s, Stim::BrainBurst(_) | Stim::Proc(_)) && t.saturating_sub(self.last_user) < 60 { return; }
         self.last_stim = t;
         self.rot += 1;
         let r = self.rot;
@@ -52,7 +56,12 @@ impl Mood {
                 self.last_user = t;
                 self.set(t, if r % 2 == 0 { 27 } else { 3 }, format!("«{w}». Nueva para mí.\nLa guardo."));
             }
-            Stim::Word { w, known: true, assoc } => {
+            Stim::Word { w, known: true, val: Some(v), .. } if v.abs() > 0.02 => {
+                self.last_user = t;
+                if v > 0.0 { self.set(t, 4, format!("«{w}».\nEso me gusta.")) } else { self.set(t, 22, format!("«{w}».\nEso no me gusta.")) }
+            }
+            Stim::Expected(w) => { self.last_user = t; self.set(t, 26, format!("«{w}».\nLo veía venir.")) }
+            Stim::Word { w, known: true, assoc, .. } => {
                 self.last_user = t;
                 let a = assoc.into_iter().filter(|x| !x.ends_with(&w)).take(2).collect::<Vec<_>>().join(", ");
                 let line = if a.is_empty() { format!("«{w}». Otra vez.\nMe acuerdo.") } else { format!("«{w}». Me suena:\n{a}.") };

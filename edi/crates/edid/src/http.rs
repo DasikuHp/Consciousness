@@ -19,6 +19,10 @@ pub struct Shared {
     pub backbone: Vec<u8>,
     pub activity: Mutex<VecDeque<(u64, Vec<f32>)>>,
     pub face: Mutex<serde_json::Value>,
+    pub learn: Mutex<serde_json::Value>,
+    pub reward: Mutex<f32>,
+    /// (longitud, vocabulario, historia reciente de conceptos (ROSA), valencias medidas)
+    pub seq: Mutex<(usize, Vec<String>, Vec<u32>, Vec<(String, f32)>)>,
 }
 
 const DASH: &str = include_str!("dashboard.html");
@@ -37,7 +41,14 @@ fn recall_json(sh: &Shared, word: &str) -> String {
         let n = &m.nodes[*i as usize];
         serde_json::json!({"kind": format!("{:?}", n.kind), "label": n.label, "a": a, "dreamed": n.src == Src::Dreamed})
     }).collect();
-    serde_json::json!({"query": word, "known": seed.is_some(), "recalled": items}).to_string()
+    drop(m);
+    // ROSA: lo que vino justo después la última vez (recuerdo episódico exacto, en orden)
+    let sq = sh.seq.lock().unwrap();
+    let after: Vec<String> = sq.1.iter().position(|l| l == &format!("OYE:{word}") || l == word)
+        .and_then(|t| sq.2[..sq.2.len().saturating_sub(1)].iter().rposition(|&x| x as usize == t))
+        .map(|j| sq.2[j + 1..(j + 6).min(sq.2.len())].iter().map(|&x| sq.1[x as usize].clone()).collect()).unwrap_or_default();
+    let val = sq.3.iter().find(|(l, _)| l == &format!("OYE:{word}") || l == word).map(|x| x.1);
+    serde_json::json!({"query": word, "known": seed.is_some(), "recalled": items, "despues": after, "valencia": val}).to_string()
 }
 
 fn handle(mut s: TcpStream, sh: Arc<Shared>) {
@@ -124,6 +135,12 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
             std::thread::sleep(std::time::Duration::from_millis(400));
             respond(&mut s, "application/json", recall_json(&sh, &last).as_bytes())
         }
+        ("POST", "/reward") => {
+            let v: f32 = if body.trim().starts_with('-') { -1.0 } else { 1.0 };
+            *sh.reward.lock().unwrap() = v;
+            respond(&mut s, "application/json", b"{\"ok\":true}")
+        }
+        ("GET", "/learn") => respond(&mut s, "application/json", sh.learn.lock().unwrap().to_string().as_bytes()),
         ("POST", "/sleep") => { sh.force_sleep.store(true, Ordering::Relaxed); respond(&mut s, "application/json", b"{\"ok\":true}") }
         _ => { let _ = s.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"); }
     }

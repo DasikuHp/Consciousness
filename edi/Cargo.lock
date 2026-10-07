@@ -73,6 +73,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "edi-rosa"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "edi-samn"
 version = "0.1.0"
 dependencies = [
@@ -87,7 +95,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "edi-brain",
+ "edi-rosa",
  "edi-samn",
+ "rand",
+ "rand_chacha",
  "serde",
  "serde_json",
 ]
