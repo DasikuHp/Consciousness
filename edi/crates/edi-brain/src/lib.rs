@@ -140,6 +140,8 @@ pub struct Brain<'c> {
     pub sfa: Option<(f32, f32)>,
     /// Desplazamiento de umbral por neurona (plasticidad homeostática intrínseca; estado aprendido).
     pub thr_offset: Option<Vec<f32>>,
+    /// Atención multirresolución: solo se simulan las neuronas con máscara=true (foco); el resto no se calcula.
+    pub focus: Option<Vec<bool>>,
     theta: Vec<f32>,
     theta_step: Vec<u64>,
 }
@@ -156,12 +158,13 @@ impl<'c> Brain<'c> {
             ring: vec![vec![0.0; c.n]; d + 1], step: 0, spikes: Vec::new(), counts: vec![0; c.n],
             eg: eg as f32, ev: ev as f32, kvg: kvg as f32,
             rfc_steps: (p.t_rfc / p.dt).round() as u32, p,
-            event_driven: true, active: Vec::new(), is_active: vec![false; c.n], ring_s: vec![Vec::new(); d + 1], last_updates: 0, eps: 1e-2, edge_gain: None, std_dep: None, res: vec![1.0; c.n], last_spike_step: vec![0; c.n], sfa: None, thr_offset: None, theta: vec![0.0; c.n], theta_step: vec![0; c.n],
+            event_driven: true, active: Vec::new(), is_active: vec![false; c.n], ring_s: vec![Vec::new(); d + 1], last_updates: 0, eps: 1e-2, edge_gain: None, std_dep: None, res: vec![1.0; c.n], last_spike_step: vec![0; c.n], sfa: None, thr_offset: None, focus: None, theta: vec![0.0; c.n], theta_step: vec![0; c.n],
         }
     }
 
     #[inline]
     fn activate(&mut self, i: usize) {
+        if let Some(f) = &self.focus { if !f[i] { return; } }
         if !self.is_active[i] {
             self.is_active[i] = true;
             self.active.push(i as u32);

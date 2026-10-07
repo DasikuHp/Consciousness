@@ -1,0 +1,10 @@
+== Prueba 3: atención multirresolución (azúcar → MN9, 1 s, 5 ensayos) ==
+MN9 está en la región: SEZ
+cerebro completo       MN9  96.6 Hz · neuronas/paso   8065 · 2.73 s · correlación con completo 1.000
+foco SEZ+otras         MN9  93.8 Hz · neuronas/paso   5704 · 1.76 s · correlación con completo 1.000
+foco SEZ               MN9  97.0 Hz · neuronas/paso   3122 · 1.05 s · correlación con completo 0.999
+foco SEZ+otras+AL+LH   MN9  93.8 Hz · neuronas/paso   5767 · 1.69 s · correlación con completo 1.000
+
+== Prueba 4: codificación predictiva (Quijote, 2.000 letras, oído JO) ==
+sin predicción           spikes totales   511748 · correlación respuesta↔sorpresa -0.068
+con predicción (solo sorpresa) spikes totales   462998 · correlación respuesta↔sorpresa 0.617
