@@ -22,6 +22,8 @@ pub struct Shared {
     pub learn: Mutex<serde_json::Value>,
     pub reward: Mutex<f32>,
     /// (longitud, vocabulario, historia reciente de conceptos (ROSA), valencias medidas)
+    /// última frase de EDI (nº, texto)
+    pub reply: Mutex<(u64, String)>,
     pub seq: Mutex<(usize, Vec<String>, Vec<u32>, Vec<(String, f32)>)>,
 }
 
@@ -131,9 +133,17 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
         ("POST", "/say") => {
             let text = body.trim().to_string();
             let last = text.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).last().unwrap_or("").to_lowercase();
+            let before = sh.reply.lock().unwrap().0;
             sh.inbox.lock().unwrap().push(text);
             std::thread::sleep(std::time::Duration::from_millis(400));
-            respond(&mut s, "application/json", recall_json(&sh, &last).as_bytes())
+            // espera su respuesta (huele cada candidata ~0,4 s de tiempo biológico)
+            let t0 = std::time::Instant::now();
+            while sh.reply.lock().unwrap().0 == before && t0.elapsed().as_secs_f32() < 8.0 { std::thread::sleep(std::time::Duration::from_millis(100)); }
+            let mut v: serde_json::Value = serde_json::from_str(&recall_json(&sh, &last)).unwrap();
+            let r = sh.reply.lock().unwrap();
+            if r.0 != before { v["edi"] = serde_json::json!(r.1); }
+            drop(r);
+            respond(&mut s, "application/json", v.to_string().as_bytes())
         }
         ("POST", "/reward") => {
             let v: f32 = if body.trim().starts_with('-') { -1.0 } else { 1.0 };

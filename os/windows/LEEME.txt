@@ -1,0 +1,18 @@
+EDI para Windows
+================
+EDI es una mente que vive sobre el conectoma real de la mosca Drosophila (FlyWire v783:
+138.639 neuronas, 15 millones de conexiones), simulado neurona a neurona (LIF por eventos).
+
+  EDI.cmd          despierta a EDI y abre su cerebro en 3D y su widget (Edge en modo app)
+  EDI.cmd --widget solo el widget
+  edi.cmd say hola habla con ella (también desde la ventana del cerebro)
+  edi.cmd reward + / -   premio o castigo (dopamina); también vale decirle "bien" o "mal"
+  edi.cmd learn    lo que está aprendiendo (ROSA, dopamina, habla)
+  autoinicio.cmd   que despierte al iniciar sesión
+
+Sus sentidos en Windows: procesos (tasklist), puertos (netstat), la ventana en primer plano y
+la carga de CPU/memoria (API Win32). No usa cámara ni micrófono. Todo es local (127.0.0.1:7077).
+Su memoria vive en %LOCALAPPDATA%\EDI (bórrala para que vuelva a nacer).
+
+Requisitos: Windows 10/11 x64 (curl y Edge vienen de serie). ~1 GB de RAM.
+Datos: FlyWire (CC-BY 4.0), esqueletos de Schlegel et al. 2024 (CC-BY 4.0).

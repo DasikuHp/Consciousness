@@ -12,12 +12,14 @@ mod http;
 mod learn;
 mod mood;
 mod senses;
+mod speech;
 
 use anyhow::Result;
 use edi_brain::{entropy::{Entropy, Source}, Brain, Connectome, Params};
 use edi_rosa::{Rosa, Rosa1Bit, Vocab};
 use edi_samn::{Samn, EMB};
 use http::Shared;
+use rand::Rng;
 use std::collections::{HashSet, VecDeque};
 use std::io::Write;
 use std::path::PathBuf;
@@ -80,7 +82,12 @@ use learn::fnv;
 
 /// Lo que EDI aprende fuera del conectoma: secuencias (ROSA), valencias y sinapsis KC→MBON.
 #[derive(serde::Serialize, serde::Deserialize, Default)]
-struct Learned { vocab: Vocab, seq: Rosa, bits: Rosa1Bit, valence: learn::Valence }
+struct Learned { vocab: Vocab, seq: Rosa, bits: Rosa1Bit, valence: learn::Valence,
+    /// conversación (tuya y suya), palabra a palabra con <fin> entre turnos: de aquí imita
+    #[serde(default)] talk: Rosa, #[serde(default)] tvocab: Vocab }
+
+/// Respuesta en preparación: candidatas imitadas, cada una olida junto al contexto.
+struct Reply { ctx: Vec<u32>, cands: Vec<u32>, scores: Vec<Option<f32>>, odors: Vec<Vec<(u32, f32)>> }
 
 const POS: [&str; 8] = ["bien", "genial", "bravo", "gracias", "perfecto", "guay", "buena", "bueno"];
 const NEG: [&str; 6] = ["mal", "malo", "mala", "feo", "basta", "error"];
@@ -100,9 +107,18 @@ fn positions(dir: &PathBuf) -> (Vec<u8>, f32) {
 }
 
 fn main() -> Result<()> {
-    let brain_dir = PathBuf::from(std::env::var("EDI_BRAIN").unwrap_or("/usr/share/edi/brain/flywire783".into()));
-    let home = std::env::var("HOME").unwrap_or("/tmp".into());
-    let state = PathBuf::from(std::env::var("EDI_STATE").unwrap_or_else(|_| format!("{home}/.local/state/edi")));
+    let brain_dir = PathBuf::from(std::env::var("EDI_BRAIN").unwrap_or_else(|_| if cfg!(windows) {
+        std::env::current_exe().ok().and_then(|e| e.parent().map(|d| d.join("brain").to_string_lossy().into_owned())).unwrap_or("brain".into())
+    } else { "/usr/share/edi/brain/flywire783".into() }));
+    // el servidor HTTP lee estas rutas (esqueletos, caras): fijarlas antes de lanzar hilos
+    std::env::set_var("EDI_BRAIN", &brain_dir);
+    if cfg!(windows) && std::env::var("EDI_ASSETS").is_err() {
+        if let Some(d) = std::env::current_exe().ok().and_then(|e| e.parent().map(|d| d.join("face"))) { std::env::set_var("EDI_ASSETS", d); }
+    }
+    let home = std::env::var("HOME").or_else(|_| std::env::var("USERPROFILE")).unwrap_or("/tmp".into());
+    // Windows: estado en %LOCALAPPDATA%\EDI y el cerebro junto al .exe
+    let state = PathBuf::from(std::env::var("EDI_STATE").unwrap_or_else(|_| match std::env::var("LOCALAPPDATA") {
+        Ok(l) if cfg!(windows) => format!("{l}\\EDI"), _ => format!("{home}/.local/state/edi") }));
     let niri_dir = PathBuf::from(std::env::var("EDI_NIRI_DIR").unwrap_or_else(|_| format!("{home}/.config/niri")));
     let (max_ticks, port, sleep_after): (u64, u16, f64) = (env("EDI_MAX_TICKS", u64::MAX), env("EDI_PORT", 7077), env("EDI_SLEEP_AFTER", 2400.0));
     std::fs::create_dir_all(&state)?;
@@ -161,7 +177,7 @@ fn main() -> Result<()> {
     let sh = Arc::new(Shared {
         state: Mutex::new(serde_json::json!({})), spikes: Mutex::new(VecDeque::new()), samn: Mutex::new(samn),
         events: Mutex::new(VecDeque::new()), inbox: Mutex::new(vec![]), force_sleep: Default::default(), pos, group,
-        region: region.clone(), backbone, learn: Mutex::new(serde_json::json!({})), reward: Mutex::new(0.0), seq: Mutex::new((0, vec![], vec![], vec![])), activity: Mutex::new(VecDeque::new()), face: Mutex::new(serde_json::json!({})),
+        region: region.clone(), backbone, learn: Mutex::new(serde_json::json!({})), reward: Mutex::new(0.0), seq: Mutex::new((0, vec![], vec![], vec![])), reply: Mutex::new((0, String::new())), activity: Mutex::new(VecDeque::new()), face: Mutex::new(serde_json::json!({})),
     });
     let mut say = |sh: &Shared, t: u64, s: String| {
         let line = serde_json::json!({"t": t, "ev": s});
@@ -192,7 +208,11 @@ fn main() -> Result<()> {
         let mut k = [0u32; 8]; for &r in &region { k[r as usize % 8] += 1; } k });
     let mut metrics = serde_json::json!({});
     // olfato de conceptos: uno cada vez, 8 ticks (400 ms); se mide su MBON para la valencia
-    let mut smell_q: VecDeque<(String, f32)> = VecDeque::new();
+    let mut smell_q: VecDeque<(String, Vec<(u32, f32)>)> = VecDeque::new();
+    let mut reply: Option<Reply> = None;
+    let mut last_said: Option<(u64, Vec<(u32, f32)>)> = None;
+    let mut n_said = 0u64;
+    let mut prev_utt: Option<Vec<u32>> = None;
     let mut smelling: Option<(String, Vec<(u32, f32)>, u32, Vec<f32>)> = None;
     let mut kc_hits = 0usize;
     let (mut da_left, mut da_sign, mut da_events, mut da_changes) = (0u32, 0f32, 0u64, 0u64);
@@ -235,7 +255,7 @@ fn main() -> Result<()> {
                 seq_tot += 1; if hit { seq_hit += 1; }
                 let gain = if hit { 0.3 } else { 1.0 };
                 boosts.push((set.into_iter().map(|(i, hz)| (i, hz * gain)).collect(), 8));
-                if smell_q.len() < 6 { smell_q.push_back((format!("OYE:{w}"), gain)); }
+                if smell_q.len() < 6 { let l = format!("OYE:{w}"); let od = mb.odor(&l).into_iter().map(|(i, hz)| (i, hz * gain)).collect(); smell_q.push_back((l, od)); }
                 let p = learned.seq.push(tok);
                 expect = p.map(|p| p.token);
                 if POS.contains(&w.as_str()) { da_left = 6; da_sign = 1.0; }
@@ -257,12 +277,36 @@ fn main() -> Result<()> {
 
         let r = std::mem::take(&mut *sh.reward.lock().unwrap());
         if r != 0.0 { da_left = 6; da_sign = r.signum(); }
+        // tu reacción llega: se reactiva (replay) lo que EDI acaba de decir mientras sube la dopamina
+        if da_left == 6 { if let Some((t, od)) = &last_said { if tk.saturating_sub(*t) < 200 { smelling = Some(("HABLA!".into(), od.clone(), 8, vec![])); } } }
+        // habla v2: imitar candidatas de lo que un humano dijo tras esto y olerlas con el contexto
+        if let Some(text) = heard.last() {
+            let fin = learned.tvocab.id(speech::FIN);
+            let ctx = speech::tokens(&mut learned.tvocab, text);
+            let feedback = ctx.iter().all(|&t| { let w = learned.tvocab.label(t); POS.contains(&w) || NEG.contains(&w) || w == "muy" });
+            if !ctx.is_empty() && !feedback {
+                // imitación: lo que TÚ dices tras algo queda como posible respuesta a eso (nunca se copia a sí misma)
+                if let Some(p) = prev_utt.replace(ctx.clone()) {
+                    // «pregunta <fin> respuesta <fin> <fin>»: el doble <fin> separa pares
+                    for &t in p.iter().chain([fin].iter()).chain(ctx.iter()) { learned.talk.push(t); }
+                    learned.talk.push(fin); learned.talk.push(fin);
+                }
+                let ctx_text = ctx.iter().map(|&t| learned.tvocab.label(t)).collect::<Vec<_>>().join(" ");
+                let mut cands = speech::candidates(&learned.talk, &ctx, fin, 4);
+                if cands.is_empty() { cands.push(*ctx.last().unwrap()); } // ecolalia: aún no sabe, repite (como un bebé)
+                let odors: Vec<_> = cands.iter().map(|&c| speech::conj_odor(&mb, &ctx_text, learned.tvocab.label(c))).collect();
+                smell_q.retain(|(l, _)| !l.starts_with("HABLA?"));
+                for (i, o) in odors.iter().enumerate().rev() { smell_q.push_front((format!("HABLA?{i}"), o.clone())); }
+                if smelling.as_ref().map_or(false, |s| s.0.starts_with("HABLA?")) { smelling = None; }
+                reply = Some(Reply { ctx: ctx.clone(), scores: vec![None; cands.len()], cands, odors });
+            }
+        }
         for (l, _) in new_events.iter().filter(|(l, _)| !l.starts_with("OYE:") && !l.starts_with("ESTRES") && !l.starts_with("PROC:")) {
             let tok = learned.vocab.id(l);
             let hit = expect == Some(tok);
             seq_tot += 1; if hit { seq_hit += 1; }
             expect = learned.seq.push(tok).map(|p| p.token);
-            if smell_q.len() < 6 { smell_q.push_back((l.clone(), if hit { 0.3 } else { 1.0 })); }
+            if smell_q.len() < 6 { let g = if hit { 0.3 } else { 1.0 }; smell_q.push_back((l.clone(), mb.odor(l).into_iter().map(|(i, hz)| (i, hz * g)).collect())); }
         }
 
         // sueño: consolidar, soñar, olvidar
@@ -281,7 +325,7 @@ fn main() -> Result<()> {
             let mut drive = baseline.clone();
             boosts.retain_mut(|(set, left)| { drive.extend(set.iter().cloned()); *left -= 1; *left > 0 });
             if smelling.is_none() {
-                if let Some((l, g)) = smell_q.pop_front() { let od = mb.odor(&l).into_iter().map(|(i, hz)| (i, hz * g)).collect(); smelling = Some((l, od, 8, vec![])); }
+                if let Some((l, od)) = smell_q.pop_front() { smelling = Some((l, od, 8, vec![])); }
             }
             if let Some((_, od, _, _)) = &smelling { drive.extend(od.iter().cloned()); }
             if da_left > 0 {
@@ -301,7 +345,27 @@ fn main() -> Result<()> {
                 if let Some((l, _, left, acc)) = &mut smelling {
                     mb.kc_counts(&counts, acc);
                     *left -= 1;
-                    if *left == 0 {
+                    if *left == 0 && l.starts_with("HABLA") {
+                        if let (Some(i), Some(rp)) = (l.strip_prefix("HABLA?").and_then(|x| x.parse::<usize>().ok()), reply.as_mut()) {
+                            if i < rp.scores.len() { rp.scores[i] = Some(mb.valence(acc, brain.edge_gain.as_ref().unwrap())); }
+                            mb.seen(acc);
+                            if rp.scores.iter().all(|x| x.is_some()) {
+                                let sc: Vec<f32> = rp.scores.iter().map(|x| x.unwrap()).collect();
+                                let pick = if rng.gen::<f32>() < 0.1 { rng.gen_range(0..sc.len()) } else {
+                                    (0..sc.len()).max_by(|&a, &b| sc[a].partial_cmp(&sc[b]).unwrap()).unwrap() };
+                                let fin = learned.tvocab.id(speech::FIN);
+                                let phrase = speech::complete(&learned.talk, &rp.ctx, rp.cands[pick], fin, 8);
+                                let text = phrase.iter().map(|&t| learned.tvocab.label(t)).collect::<Vec<_>>().join(" ");
+                                last_said = Some((tk, rp.odors[pick].clone()));
+                                n_said += 1;
+                                *sh.reply.lock().unwrap() = (n_said, text.clone());
+                                mood.stim(tk, face::Stim::Speak(text.clone()));
+                                say(&sh, now(), format!("DICE: {text}"));
+                                reply = None;
+                            }
+                        }
+                        smelling = None;
+                    } else if *left == 0 {
                         kc_hits = acc.iter().filter(|&&x| x > 0.0).count();
                         learned.valence.now.insert(l.clone(), mb.valence(acc, brain.edge_gain.as_ref().unwrap()));
                         mb.seen(acc);
@@ -392,6 +456,7 @@ fn main() -> Result<()> {
                      "espera": expect.map(|t| learned.vocab.label(t).to_string()),
                      "acierto_1bit_cerebro": if bits_tot > 0 { bits_hit as f64 / bits_tot as f64 } else { 0.0 }},
             "dopamina": {"refuerzos": da_events, "cambios_sinapticos": da_changes, "sinapsis_kc_mbon_deprimidas": mb.depressed(brain.edge_gain.as_ref().unwrap())},
+            "habla": {"frases_dichas": n_said, "turnos_oidos_y_dichos": learned.talk.hist.iter().filter(|&&t| learned.tvocab.labels.get(t as usize).map_or(false, |l| l == speech::FIN)).count(), "palabras": learned.tvocab.labels.len()},
             "kc_activas_pct": 100.0 * kc_frac, "oliendo": smelling.as_ref().map(|s| s.0.clone()),
             "ultimo_olido": {"concepto": last_smell, "kc_activadas": kc_hits, "valencia": learned.valence.of(&last_smell)},
             "foco": if focus_ol { "sin lóbulo óptico (no hay visión)" } else { "cerebro completo" },

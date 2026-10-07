@@ -50,6 +50,7 @@ impl Rosa {
 
     /// Añade un token y devuelve la predicción del siguiente (None si no hay contexto previo).
     pub fn push(&mut self, t: u32) -> Option<Pred> {
+        if self.next.is_empty() { self.reset(); } // creada con Default
         if self.window > 0 && self.hist.len() >= 2 * self.window {
             let keep = self.hist.split_off(self.hist.len() - self.window);
             self.hist = keep;
@@ -133,5 +134,24 @@ impl Rosa1Bit {
             self.pred[k] = self.ch[k].push(b as u32).map(|p| p.token);
         }
         (hit, tot)
+    }
+}
+
+impl Rosa {
+    /// Todas las continuaciones del contexto más largo (hasta `max_ctx` tokens) que ya apareció:
+    /// (token, veces), de más a menos frecuente. Es lo que "la gente dijo después de esto".
+    pub fn continuations(&self, ctx: &[u32], max_ctx: usize) -> Vec<(u32, u32)> {
+        let h = &self.hist;
+        for l in (1..=max_ctx.min(ctx.len())).rev() {
+            let pat = &ctx[ctx.len() - l..];
+            let mut out: Vec<(u32, u32)> = vec![];
+            for j in l..h.len() {
+                if &h[j - l..j] == pat {
+                    match out.iter_mut().find(|e| e.0 == h[j]) { Some(e) => e.1 += 1, None => out.push((h[j], 1)) }
+                }
+            }
+            if !out.is_empty() { out.sort_by(|a, b| b.1.cmp(&a.1)); return out; }
+        }
+        vec![]
     }
 }

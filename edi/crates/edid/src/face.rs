@@ -13,6 +13,8 @@ pub enum Stim {
     Word { w: String, known: bool, assoc: Vec<String>, val: Option<f32> },
     /// ROSA lo predijo: ya lo esperaba
     Expected(String),
+    /// lo que EDI dice (habla v2)
+    Speak(String),
     Port(u16),
     Proc(String),
     Focus(String),
@@ -60,6 +62,7 @@ impl Mood {
                 self.last_user = t;
                 if v > 0.0 { self.set(t, 4, format!("«{w}».\nEso me gusta.")) } else { self.set(t, 22, format!("«{w}».\nEso no me gusta.")) }
             }
+            Stim::Speak(p) => { self.last_user = t; self.set(t, if r % 2 == 0 { 13 } else { 21 }, p) }
             Stim::Expected(w) => { self.last_user = t; self.set(t, 26, format!("«{w}».\nLo veía venir.")) }
             Stim::Word { w, known: true, assoc, .. } => {
                 self.last_user = t;
