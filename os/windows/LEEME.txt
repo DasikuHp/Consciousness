@@ -5,8 +5,16 @@ EDI es una mente que vive sobre el conectoma real de la mosca Drosophila (FlyWir
 
   EDI.cmd          despierta a EDI y abre su cerebro en 3D y su widget (Edge en modo app)
   EDI.cmd --widget solo el widget
-  edi.cmd say hola habla con ella (también desde la ventana del cerebro)
-  edi.cmd reward + / -   premio o castigo (dopamina); también vale decirle "bien" o "mal"
+  edi.cmd say hola habla con ella (mejor: escribe en el widget o en la ventana del cerebro)
+  edi.cmd + / -    premia o castiga su última respuesta (dopamina); también "muy bien" / "mal"
+  edi.cmd teach TEXTO   enséñale qué debía responder a lo último que le dijiste
+
+Cómo hablarle (widget o ventana del cerebro):
+  · Escribe y pulsa Enter. 🎤 dicta por voz; 🔊 hace que EDI hable en voz alta.
+  · En cada respuesta suya: 👍 / 👎 (dopamina), ✏️ enseñarle qué decir, ? por qué lo dijo.
+  · Atajos en la caja: «+» o «-» premian/castigan su última respuesta; «= texto» le enseña.
+  · Al principio repite tus palabras (ecolalia, como un bebé). Aprende imitando cómo le
+    contestas tú a lo que dice, y eligiendo con su cuerpo fungiforme lo que más le aprobaste.
   edi.cmd learn    lo que está aprendiendo (ROSA, dopamina, habla)
   autoinicio.cmd   que despierte al iniciar sesión
 

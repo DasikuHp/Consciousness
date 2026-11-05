@@ -24,7 +24,8 @@ pub fn tokens(v: &mut Vocab, text: &str) -> Vec<u32> {
 pub fn candidates(seq: &Rosa, ctx: &[u32], fin: u32, k: usize) -> Vec<u32> {
     let mut c = ctx.to_vec();
     c.push(fin);
-    seq.continuations(&c, MAX_CTX).into_iter().map(|x| x.0).filter(|&t| t != fin).take(k).collect()
+    // al menos «palabra <fin>»: un <fin> suelo no es contexto
+    seq.continuations_min(&c, MAX_CTX, 2).into_iter().map(|x| x.0).filter(|&t| t != fin).take(k).collect()
 }
 
 /// Completa la frase imitando: siguiente palabra más frecuente tras el contexto más largo.
@@ -34,7 +35,7 @@ pub fn complete(seq: &Rosa, ctx: &[u32], first: u32, fin: u32, max: usize) -> Ve
     c.push(first);
     let mut out = vec![first];
     while out.len() < max {
-        match seq.continuations(&c, MAX_CTX).first() { Some(&(t, _)) if t != fin => { out.push(t); c.push(t); } _ => break }
+        match seq.continuations_min(&c, MAX_CTX, 2).first() { Some(&(t, _)) if t != fin => { out.push(t); c.push(t); } _ => break }
     }
     out
 }

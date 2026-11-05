@@ -15,6 +15,8 @@ pub enum Stim {
     Expected(String),
     /// lo que EDI dice (habla v2)
     Speak(String),
+    /// tu reacción a lo que dijo (true = 👍)
+    Feedback(bool),
     Port(u16),
     Proc(String),
     Focus(String),
@@ -62,6 +64,8 @@ impl Mood {
                 self.last_user = t;
                 if v > 0.0 { self.set(t, 4, format!("«{w}».\nEso me gusta.")) } else { self.set(t, 22, format!("«{w}».\nEso no me gusta.")) }
             }
+            Stim::Feedback(true) => { self.last_user = t; self.set(t, if r % 2 == 0 { 21 } else { 4 }, "Apuntado.\nEso lo repito.".into()) }
+            Stim::Feedback(false) => { self.last_user = t; self.set(t, if r % 2 == 0 { 24 } else { 28 }, "Vale…\nno lo vuelvo a decir así.".into()) }
             Stim::Speak(p) => { self.last_user = t; self.set(t, if r % 2 == 0 { 13 } else { 21 }, p) }
             Stim::Expected(w) => { self.last_user = t; self.set(t, 26, format!("«{w}».\nLo veía venir.")) }
             Stim::Word { w, known: true, assoc, .. } => {

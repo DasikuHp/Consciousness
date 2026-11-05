@@ -140,9 +140,12 @@ impl Rosa1Bit {
 impl Rosa {
     /// Todas las continuaciones del contexto más largo (hasta `max_ctx` tokens) que ya apareció:
     /// (token, veces), de más a menos frecuente. Es lo que "la gente dijo después de esto".
-    pub fn continuations(&self, ctx: &[u32], max_ctx: usize) -> Vec<(u32, u32)> {
+    pub fn continuations(&self, ctx: &[u32], max_ctx: usize) -> Vec<(u32, u32)> { self.continuations_min(ctx, max_ctx, 1) }
+
+    /// Igual, pero exige que coincidan al menos `min_ctx` tokens de contexto.
+    pub fn continuations_min(&self, ctx: &[u32], max_ctx: usize, min_ctx: usize) -> Vec<(u32, u32)> {
         let h = &self.hist;
-        for l in (1..=max_ctx.min(ctx.len())).rev() {
+        for l in (min_ctx.max(1)..=max_ctx.min(ctx.len())).rev() {
             let pat = &ctx[ctx.len() - l..];
             let mut out: Vec<(u32, u32)> = vec![];
             for j in l..h.len() {

@@ -13,12 +13,13 @@ h3{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;c
 #top{position:fixed;left:360px;right:380px;top:10px;display:flex;align-items:center;gap:14px;color:#7fd8d8;letter-spacing:.6em;font-size:12px}
 #top .ln{flex:1;height:1px;background:var(--line)}#tclock{letter-spacing:.05em;color:var(--fg)}
 #vida{left:14px;top:14px;width:320px}#vista{left:14px;top:262px;width:320px}
-.mini{height:118px;margin:8px 0;border:1px solid var(--line);border-radius:4px;position:relative}
-.mini span{position:absolute;right:-92px;top:44px;color:var(--dim);letter-spacing:.12em;font-size:11px;width:80px}
+.mini{height:70px;margin:6px 0;border:1px solid var(--line);border-radius:4px;position:relative}
+.mini span{position:absolute;right:-92px;top:26px;color:var(--dim);letter-spacing:.12em;font-size:11px;width:80px}
 .mini{width:190px}
 #talk{left:14px;bottom:14px;width:320px}
 #talk .who{display:flex;gap:10px;align-items:flex-end;margin-top:8px}
-#talk img{width:54px;height:auto;filter:drop-shadow(0 0 10px rgba(79,209,197,.35))}
+#talk [data-edi=face]{width:50px;flex:none;filter:drop-shadow(0 0 10px rgba(79,209,197,.35))}
+#talk [data-edi=log]{max-height:92px;margin-bottom:4px}
 .bub{position:relative;flex:1;border:1px solid #7fd8d8;border-radius:8px;padding:6px 9px;background:rgba(8,14,24,.8);white-space:pre-line;min-height:34px}
 .bub:after{content:"";position:absolute;right:-7px;bottom:12px;border:6px solid transparent;border-left-color:#7fd8d8}
 input{width:100%;background:#050b16;color:var(--fg);border:1px solid #2a4a66;border-radius:5px;padding:8px 10px;font:inherit}
@@ -46,8 +47,8 @@ input{width:100%;background:#050b16;color:var(--fg);border:1px solid #2a4a66;bor
 <div class="p" id="vida"><h3>Vida</h3><div id="v"></div></div>
 <div class="p" id="vista"><h3>Vista</h3><div id="vs"></div>
  <div class="mini" id="vFront"><span>FRONTAL</span></div><div class="mini" id="vTop"><span>SUPERIOR</span></div><div class="mini" id="vSide"><span>LATERAL</span></div></div>
-<div class="p" id="talk"><h3>Háblale</h3><input id="t" placeholder="escribe algo y pulsa Enter…" autocomplete="off">
- <div class="who"><div class="bub" id="bub">…</div><img id="face" alt="EDI"></div></div>
+<div class="p" id="talk"><h3>Háblale</h3><div data-edi="log"></div><div data-edi="input"></div>
+ <div class="who"><div class="bub" id="bub">…</div><div data-edi="face"></div></div></div>
 <div class="p" id="mem"><h3>Memoria activa (SAMN)</h3><div id="m"></div></div>
 <div class="p" id="circ"><h3>Circuitos destacados</h3><div id="cc"></div></div>
 <div class="p" id="det"><div class="d" id="dMB"><span>Cuerpo fungiforme</span></div><div class="d" id="dAL"><span>Lóbulo antenal</span></div><div class="d" id="dOL"><span>Capas ópticas (OL)</span></div><div class="d" id="dCX"><span>Complejo central</span></div></div>
@@ -56,6 +57,7 @@ input{width:100%;background:#050b16;color:var(--fg);border:1px solid #2a4a66;bor
 <div class="p" id="reg"><h3>Regiones <span class="k">(actividad)</span></h3><div id="rg"></div></div></div>
 <div id="scale"><i id="sbar"></i>100 µm</div>
 <div id="legend"></div>
+<script src="/chat.js"></script>
 <script>
 const QS=new URLSearchParams(location.search),FRAME_MS=+QS.get('frameMs')||0;
 const $=id=>document.getElementById(id),cv=$('gl'),gl=cv.getContext('webgl2',{antialias:false,alpha:false})||cv.getContext('webgl',{antialias:true,alpha:false});
@@ -221,8 +223,7 @@ function loops(){
  setInterval(async()=>{try{const m=await J('/memory');
   $('m').innerHTML=`<div class=k>${m.episodes} episodios:</div>`+m.top.map(n=>`<div class=n><span class="tag t-${n.kind} ${n.dreamed?'dream':''}">${n.dreamed?'soñado':({Event:'event',Word:'palabra',Episode:'episodio',Concept:'concepto',Skill:'habilidad'}[n.kind]||n.kind)}</span><b title="${n.label}">${n.label}</b><span>${(n.a*100)|0}</span></div>`).join('')}catch(e){}},1200);
 }
-let faceId=0;function setFace(f){if(f.id!==faceId){$('face').src=`/face/${String(f.id).padStart(2,'0')}_${f.name}.svg`;faceId=f.id}$('bub').textContent=f.line}
-$('t').onkeydown=async e=>{if(e.key!=='Enter'||!e.target.value.trim())return;const v=e.target.value;e.target.value='';
- await fetch('/say',{method:'POST',body:v});setTimeout(async()=>setFace(await J('/face')),150)};
+const chat=EDI.mount($('talk'),{max:40});
+function setFace(f){chat.face.set(f);$('bub').textContent=f.line}
 init();frame();
 </script></body></html>
