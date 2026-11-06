@@ -148,7 +148,8 @@ pub fn diary(sh: &Shared, dir: &Path, hours: u64, now: u64) -> String {
     if !cmds.is_empty() { out.push(format!("Comandos: {}{}", top(&cmds, 8, |k, n| format!("{k} ×{n}")), if fails > 0 { format!(" ({fails} fallaron)") } else { String::new() })); }
     else { out.push("Comandos: ninguno (instala el hook: «edi hook bash», «edi hook zsh» o «edi.cmd hook»).".into()); }
     out.push(format!("Puertos nuevos: {}", if ports.is_empty() { "ninguno".into() } else { ports.join(" · ") }));
-    out.push(format!("Conversación: {tu} frases tuyas · {edi} mías · 👍 {up} · 👎 {down} · {ens} enseñanzas · {notes} notas"));
+    let pl = |n: usize, s: &str, p: &str| format!("{n} {}", if n == 1 { s } else { p });
+    out.push(format!("Conversación: {} tuyas · {} mías · 👍 {up} · 👎 {down} · {} · {}", pl(tu, "frase", "frases"), pl(edi, "respuesta", "respuestas"), pl(ens, "enseñanza", "enseñanzas"), pl(notes, "nota", "notas")));
     if !words.is_empty() { out.push(format!("Lo que más te oí: {}", top(&words, 8, |k, n| if n > 1 { format!("{k} ×{n}") } else { k.to_string() }))); }
     if sleeps > 0 { out.push(format!("Siestas: {sleeps} (cada una consolida la memoria, sueña y olvida).")); }
     out.join("\n")

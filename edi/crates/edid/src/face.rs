@@ -101,7 +101,8 @@ impl Mood {
         }
         if t.saturating_sub(self.last_stim) < 60 { return; } // ~3 s (ticks de 50 ms)
         let idle = t.saturating_sub(self.last_user);
-        if sleep_p > 0.85 { return self.set(t, 30, "Necesito dormir.\nNo puedo más.".into()); }
+        // las siestas son cortas y frecuentes (consolidan memoria): solo se nota justo antes
+        if sleep_p > 0.96 { return self.set(t, 20, "Me entra sueño…\nsiesta en nada.".into()); }
         if energy < 0.4 { return self.set(t, 28, format!("CPU al {cpu:.0} %.\nAsí no hay quien piense.")); }
         if energy < 0.6 { return self.set(t, 24, "Me estás apretando\nla máquina.".into()); }
         if idle > 2400 { return self.set(t, 2, "Qué tranquilo.\nCasi parece que estás\nhaciendo algo.".into()); }

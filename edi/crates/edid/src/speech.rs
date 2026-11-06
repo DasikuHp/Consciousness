@@ -56,7 +56,9 @@ pub fn pairs(seq: &Rosa, fin: u32) -> Vec<(Vec<u32>, Vec<u32>)> {
 /// Respuestas a frases PARECIDAS (cuando la exacta no está): palabras compartidas con lo que
 /// ya oyó, ponderadas por lo raras que son (idf), como cuando un niño contesta «de nada» a
 /// «muchas gracias» porque ya oyó «gracias». Devuelve (respuesta completa, parecido), sin repetir
-/// primera palabra, de más a menos parecida.
+/// primera palabra, de más a menos parecida. Solo compiten las que se parecen al menos el 60 % de
+/// la mejor (si no, el cuerpo fungiforme elegiría entre una buena y otras que solo comparten «te»),
+/// y nunca la propia frase que acaba de oír (que la imitación guarda como respuesta a lo último que dijo).
 pub fn by_keywords(seq: &Rosa, ctx: &[u32], fin: u32, k: usize) -> Vec<(Vec<u32>, f32)> {
     let ps = pairs(seq, fin);
     if ps.is_empty() { return vec![]; }
@@ -74,9 +76,10 @@ pub fn by_keywords(seq: &Rosa, ctx: &[u32], fin: u32, k: usize) -> Vec<(Vec<u32>
     // a igual parecido, lo más reciente
     sc.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap().then(b.0.cmp(&a.0)));
     let mut out: Vec<(Vec<u32>, f32)> = vec![];
+    let best = sc.iter().find(|(i, _)| ps[*i].1 != ctx).map(|x| x.1).unwrap_or(0.0);
     for (i, s) in sc {
         let a = &ps[i].1;
-        if out.iter().any(|(o, _)| o[0] == a[0]) { continue; }
+        if a == ctx || s < 0.6 * best || out.iter().any(|(o, _)| o[0] == a[0]) { continue; }
         out.push((a.clone(), s));
         if out.len() >= k { break; }
     }
@@ -109,5 +112,14 @@ mod tests {
         assert_eq!(v.label(c[0].0[0]), "me");
         // nada en común → nada
         assert!(by_keywords(&r, &tokens(&mut v, "patata"), fin, 3).is_empty());
+        // parecido débil no compite con uno fuerte
+        teach(&mut r, &mut v, "te gusta la musica", "mucho");
+        let c = by_keywords(&r, &tokens(&mut v, "te gusta la musica clasica"), fin, 4);
+        assert_eq!(c.len(), 1);
+        assert_eq!(v.label(c[0].0[0]), "mucho");
+        // nunca devuelve la frase que acaba de oír
+        teach(&mut r, &mut v, "me llamo edi", "buenas noches edi");
+        let c = by_keywords(&r, &tokens(&mut v, "buenas noches edi"), fin, 4);
+        assert!(c.iter().all(|(a, _)| a != &tokens(&mut v, "buenas noches edi")));
     }
 }

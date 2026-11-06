@@ -34,7 +34,8 @@ Estado: fase 0 ✅ (Shiu en CPU: azúcar → MN9 a 83 Hz). Datos, pesos y códig
 - **Sentidos del sistema reales:** procesos que nacen, puertos que se abren, ventana enfocada (Niri IPC), estrés de la máquina y las palabras que le dices. Todo entra como eventos a los episodios y al oído (órgano de Johnston) del cerebro.
 - **Cerebro en 3D constante:** `edi-shell` abre el cerebro completo (posiciones reales de cada neurona, spikes en directo, memoria activa, diario, vitales) en un workspace propio de Niri, siempre encendido (`Mod+Alt+B`).
 - **Simbiosis con el escritorio:** el estado de EDI (despierta / cansada / durmiendo) reescribe `edi-mood.kdl` y Niri recolorea sus bordes en vivo.
-- **Interacción:** `edi say`, la caja "Háblale" del dashboard, `edi sleep`, `edi status`, atajos y menú al estilo Omarchy.
+- **Interacción:** `edi hablar`/`edi say`, la caja "Háblale" del dashboard y el widget (👍 👎 ✏️, voz), atajos y menú al estilo Omarchy. Ver [`docs/design/conversacion.md`](docs/design/conversacion.md).
+- **Usos diarios (los contesta el sistema, no el cerebro):** diario de lo percibido (tiempo por app, comandos, puertos), notas, recordatorios con notificación, vigilante de puertos nuevos (con el programa que los abrió) y un sentido nuevo: el hook de bash/zsh/PowerShell que le dice qué comandos usas (solo el nombre) y si fallan.
 - **Distribución:** paquete Arch (`edi`), unidad systemd con límites de recursos, hook de Omarchy para reaplicarse tras actualizar, script de ISO.
 
 ## 2. La mosca ES el RWKV (Connectome-RWKV)

@@ -19,6 +19,8 @@ IOSchedulingClass=idle
 ProtectSystem=strict
 ProtectHome=read-only
 ReadWritePaths=%h/.local/state/edi
+# su estado colorea Niri (edi-mood.kdl); «-»: no falla si no existe
+ReadWritePaths=-%h/.config/niri
 PrivateTmp=true
 NoNewPrivileges=true
 
