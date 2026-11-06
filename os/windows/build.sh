@@ -10,8 +10,8 @@ D="$R/dist/EDI-windows"
 T="$R/edi/target/x86_64-pc-windows-gnu/release"
 rm -rf "$D" && mkdir -p "$D/brain" "$D/face"
 cp "$T/edid.exe" "$D/"; cp "$T/validate.exe" "$D/edi-brain-validate.exe"
-cp "$R"/os/windows/{EDI.cmd,edi.cmd,autoinicio.cmd,LEEME.txt} "$D/"
-for f in "$D"/*.cmd "$D/LEEME.txt"; do sed -i 's/$/\r/' "$f"; done   # CRLF
+cp "$R"/os/windows/{EDI.cmd,edi.cmd,autoinicio.cmd,LEEME.txt,edi-hook.ps1} "$D/"
+for f in "$D"/*.cmd "$D/LEEME.txt" "$D/edi-hook.ps1"; do sed -i 's/$/\r/' "$f"; done   # CRLF
 B="$R/data/brain/flywire783"
 cp "$R"/os/assets/face/*.svg "$R"/os/assets/face/index.json "$R"/os/assets/face/faces.json "$D/face/"
 ( cd "$R/dist" && rm -f EDI-windows-actualizacion.zip && zip -qr9 EDI-windows-actualizacion.zip EDI-windows )

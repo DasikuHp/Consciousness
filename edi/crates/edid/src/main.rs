@@ -14,6 +14,7 @@ mod mood;
 mod senses;
 mod speech;
 mod talk;
+mod uso;
 
 use anyhow::Result;
 use edi_brain::{entropy::{Entropy, Source}, Brain, Connectome, Params};
@@ -38,16 +39,6 @@ fn now() -> u64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs
 fn env<T: std::str::FromStr>(k: &str, d: T) -> T { std::env::var(k).ok().and_then(|s| s.parse().ok()).unwrap_or(d) }
 
 struct Vital { age_ticks: u64, energy: f64, sleep_pressure: f64, asleep: bool, spikes_last: usize, births: u64 }
-
-/// Últimos turnos de la conversación (continuidad entre reinicios).
-fn load_chat(dir: &PathBuf) -> talk::ChatLog {
-    let mut c = talk::ChatLog::default();
-    if let Ok(s) = std::fs::read_to_string(dir.join("chat.jsonl")) {
-        for t in s.lines().filter_map(|l| serde_json::from_str::<talk::Turn>(l).ok()) { c.next = c.next.max(t.id); c.turns.push_back(t); }
-        while c.turns.len() > 300 { c.turns.pop_front(); }
-    }
-    c
-}
 
 fn save_learned(dir: &PathBuf, b: &Brain, mb: &learn::Mb, l: &Learned) -> Result<()> {
     std::fs::write(dir.join("kc_mbon.f32"), mb.save_gains(b.edge_gain.as_ref().unwrap()))?;
@@ -187,8 +178,9 @@ fn main() -> Result<()> {
 
     let sh = Arc::new(Shared {
         state: Mutex::new(serde_json::json!({})), spikes: Mutex::new(VecDeque::new()), samn: Mutex::new(samn),
-        events: Mutex::new(VecDeque::new()), inbox: Mutex::new(vec![]), chat: Mutex::new(load_chat(&state)), fb: Mutex::new(vec![]), force_sleep: Default::default(), pos, group,
+        events: Mutex::new(VecDeque::new()), inbox: Mutex::new(vec![]), chat: Mutex::new(talk::ChatLog::open(&state.join("chat.jsonl"))), fb: Mutex::new(vec![]), force_sleep: Default::default(), pos, group,
         region: region.clone(), backbone, learn: Mutex::new(serde_json::json!({})), seq: Mutex::new((0, vec![], vec![], vec![])), activity: Mutex::new(VecDeque::new()), face: Mutex::new(serde_json::json!({})),
+        sensed: Mutex::new(vec![]), inbox_quiet: Mutex::new(vec![]), reminders: Mutex::new(uso::load_reminders(&state)), state_dir: state.clone(), tz_offset: senses::local_offset(),
     });
     let mut say = |sh: &Shared, t: u64, s: String| {
         let line = serde_json::json!({"t": t, "ev": s});
@@ -207,6 +199,13 @@ fn main() -> Result<()> {
     let baseline: Vec<(u32, f32)> = jo.iter().map(|&i| (i, 5.0)).collect();
     let mut boosts: Vec<(Vec<(u32, f32)>, u32)> = vec![];
     let (mut known_procs, mut known_ports, mut last_focus): (HashSet<String>, HashSet<u16>, String) = (senses::procs(), senses::ports(), String::new());
+    // vigilante: puertos que ha visto alguna vez (persistente). La primera vez se siembra en silencio.
+    let ports_file = state.join("ports.json");
+    let mut ever_ports: HashSet<u16> = std::fs::read(&ports_file).ok().and_then(|r| serde_json::from_slice(&r).ok()).unwrap_or_default();
+    let mut new_at_boot: Vec<u16> = vec![];
+    if ever_ports.is_empty() { ever_ports = known_ports.clone(); } else { new_at_boot = known_ports.difference(&ever_ports).copied().collect(); }
+    let _ = std::fs::write(&ports_file, serde_json::to_vec(&ever_ports).unwrap_or_default());
+    let face_icon = std::env::var("EDI_ASSETS").ok().map(|d| format!("{d}/21_orgullo_tranquilo.png"));
     let niri_ok = niri_dir.is_dir();
     let (mut ep_start, mut last_event_tick, mut emb_avg) = (0u64, 0u64, [0f32; EMB]);
     let mut ticks_run = 0u64;
@@ -221,7 +220,6 @@ fn main() -> Result<()> {
     // olfato de conceptos: uno cada vez, 8 ticks (400 ms); se mide su MBON para la valencia
     let mut smell_q: VecDeque<(String, Vec<(u32, f32)>)> = VecDeque::new();
     let mut talk = talk::Talk::default();
-    let mut chatlog = std::fs::OpenOptions::new().create(true).append(true).open(state.join("chat.jsonl"))?;
     let mut smelling: Option<(String, Vec<(u32, f32)>, u32, Vec<f32>)> = None;
     let mut kc_hits = 0usize;
     let (mut da_left, mut da_sign, mut da_events, mut da_changes) = (0u32, 0f32, 0u64, 0u64);
@@ -244,16 +242,55 @@ fn main() -> Result<()> {
             if tk > 200 { if let Some(n) = p.difference(&known_procs).next() { mood.stim(tk, face::Stim::Proc(n.clone())); } }
             known_procs = p;
             let q = senses::ports();
-            for n in q.difference(&known_ports).take(3) { new_events.push((format!("PORT:{n}"), 0.1)); mood.stim(tk, face::Stim::Port(*n)); }
+            let mut fresh: Vec<u16> = std::mem::take(&mut new_at_boot);
+            for n in q.difference(&known_ports).take(3) {
+                new_events.push((format!("PORT:{n}"), 0.1));
+                mood.stim(tk, face::Stim::Port(*n));
+                if !ever_ports.contains(n) { fresh.push(*n); }
+            }
+            if !fresh.is_empty() {
+                // un puerto que nunca había visto escuchar: aviso (quién lo abrió, si se puede saber)
+                for n in fresh.into_iter().take(4) {
+                    ever_ports.insert(n);
+                    let who = senses::port_owner(n).map(|w| format!(" por {w}")).unwrap_or_default();
+                    let msg = format!("🔌 Nuevo puerto escuchando: {n}{who}. Nunca lo había visto abierto.");
+                    sh.chat.lock().unwrap().push("sistema", &msg, "alerta", None, vec![]);
+                    senses::notify("EDI · puerto nuevo", &msg, face_icon.as_deref());
+                    say(&sh, now(), format!("ALERTA: puerto {n}{who}"));
+                }
+                let _ = std::fs::write(&ports_file, serde_json::to_vec(&ever_ports).unwrap_or_default());
+            }
             known_ports = q;
             if let Some(f) = senses::focused() { if f != last_focus { new_events.push((format!("FOCO:{f}"), 0.0)); mood.stim(tk, face::Stim::Focus(f.clone())); last_focus = f; } }
             if vital.energy < 0.5 { new_events.push(("ESTRES:sistema".into(), -0.5)); }
             if niri_ok { let _ = mood::write(&niri_dir, vital.asleep, vital.energy); }
         }
+        // sentidos externos (hook de la terminal, notas): eventos como los demás
+        for (l, v) in std::mem::take(&mut *sh.sensed.lock().unwrap()) {
+            if let Some(c) = l.strip_prefix("CMD:").or(l.strip_prefix("FALLO:")) { mood.stim(tk, face::Stim::Cmd(c.to_string(), v >= 0.0)); }
+            new_events.push((l, v));
+        }
+        // recordatorios vencidos (también los que vencieron con EDI apagada)
+        let due: Vec<uso::Reminder> = {
+            let mut r = sh.reminders.lock().unwrap();
+            let now_s = now();
+            let d: Vec<uso::Reminder> = r.iter_mut().filter(|x| !x.done && x.at <= now_s).map(|x| { x.done = true; x.clone() }).collect();
+            if !d.is_empty() { uso::save_reminders(&state, &r); r.retain(|x| !x.done); }
+            d
+        };
+        for x in due {
+            let late = now().saturating_sub(x.at);
+            let msg = format!("⏰ {}{}", x.text, if late > 120 { format!(" (con {} de retraso: estaba apagada)", uso::dur(late)) } else { String::new() });
+            sh.chat.lock().unwrap().push("sistema", &msg, "aviso", None, vec![]);
+            senses::notify("EDI · recordatorio", &x.text, face_icon.as_deref());
+            mood.stim(tk, face::Stim::Remind(x.text.clone()));
+            say(&sh, now(), format!("RECORDATORIO: {}", x.text));
+        }
         // palabras que le dices: memoria + estímulo al oído (órgano de Johnston)
         let heard: Vec<(u64, String)> = std::mem::take(&mut *sh.inbox.lock().unwrap());
+        let quiet: Vec<String> = std::mem::take(&mut *sh.inbox_quiet.lock().unwrap());
         let mut words = vec![];
-        for (_, text) in &heard {
+        for text in heard.iter().map(|(_, t)| t).chain(quiet.iter()) {
             for w in text.split(|c: char| !c.is_alphanumeric()).filter(|w| w.len() > 1) {
                 let w = w.to_lowercase();
                 let h = fnv(&w);
@@ -283,34 +320,44 @@ fn main() -> Result<()> {
         }
 
         // conversación: tus frases (o tu aprobación) y tu feedback (👍 👎 ✏️)
+        // primero lo enseñado/premiado desde fuera (así «enseña» y luego «pregunta» en el mismo tick funciona);
+        // después lo que oye, cuyas aprobaciones («muy bien») se procesan en la segunda vuelta
         let mut fbs: Vec<talk::Feedback> = std::mem::take(&mut *sh.fb.lock().unwrap());
-        for (i, (turn, text)) in heard.iter().enumerate() {
-            let fsign = talk::feedback_sign(text);
-            if let Some(t) = sh.chat.lock().unwrap().get_mut(*turn) {
-                if fsign.is_some() { t.kind = "feedback".into(); }
-                let _ = writeln!(chatlog, "{}", serde_json::to_string(t).unwrap());
-            }
-            if let Some(sign) = fsign {
-                fbs.push(talk::Feedback::Reward { turn: None, sign });
-                continue;
-            }
-            let jobs = talk.hear(*turn, text, i + 1 == heard.len(), &mut learned.talk, &mut learned.tvocab, &mb);
-            if !jobs.is_empty() {
-                smell_q.retain(|(l, _)| !l.starts_with("HABLA?"));
-                for j in jobs.into_iter().rev() { smell_q.push_front(j); }
-                if smelling.as_ref().map_or(false, |s| s.0.starts_with("HABLA?")) { smelling = None; }
-            }
-        }
-        for fb in fbs {
-            if let Some((id, what)) = talk.feedback(fb, &mut learned.talk, &mut learned.tvocab, &mb) {
-                let mut ch = sh.chat.lock().unwrap();
-                if let Some(t) = ch.get_mut(id) {
-                    if what.starts_with('👍') { t.reward = 1 } else if what.starts_with('👎') { t.reward = -1 } else { t.reward = -1 }
+        for round in 0..2 {
+            for fb in std::mem::take(&mut fbs) {
+                if let Some((id, what)) = talk.feedback(fb, &mut learned.talk, &mut learned.tvocab, &mb) {
+                    if id == 0 {
+                        // enseñanza directa «q => a» (la orden ya dejó su turno en el chat)
+                        say(&sh, now(), format!("ENSEÑANZA {what}"));
+                        continue;
+                    }
+                    let mut ch = sh.chat.lock().unwrap();
+                    if let Some(t) = ch.get_mut(id) { t.reward = if what.starts_with('👍') { 1 } else { -1 }; }
+                    ch.save(id);
+                    if what.starts_with('✏') { ch.push("tú", what.trim_start_matches("✏️ "), "enseñanza", Some(id), vec![]); }
+                    drop(ch);
+                    say(&sh, now(), format!("FEEDBACK {what} → turno {id}"));
+                    mood.stim(tk, face::Stim::Feedback(what.starts_with('👍')));
                 }
-                if what.starts_with('✏') { let t = ch.push("tú", what.trim_start_matches("✏️ "), "enseñanza", Some(id), vec![]); let _ = writeln!(chatlog, "{}", serde_json::to_string(&t).unwrap()); }
-                drop(ch);
-                say(&sh, now(), format!("FEEDBACK {what} → turno {id}"));
-                mood.stim(tk, face::Stim::Feedback(what.starts_with('👍')));
+            }
+            if round == 1 { break; }
+            for (i, (turn, text)) in heard.iter().enumerate() {
+                let fsign = talk::feedback_sign(text);
+                if fsign.is_some() {
+                    let mut ch = sh.chat.lock().unwrap();
+                    if let Some(t) = ch.get_mut(*turn) { t.kind = "feedback".into(); }
+                    ch.save(*turn);
+                }
+                if let Some(sign) = fsign {
+                    fbs.push(talk::Feedback::Reward { turn: None, sign });
+                    continue;
+                }
+                let jobs = talk.hear(*turn, text, i + 1 == heard.len(), &mut learned.talk, &mut learned.tvocab, &mb);
+                if !jobs.is_empty() {
+                    smell_q.retain(|(l, _)| !l.starts_with("HABLA?"));
+                    for j in jobs.into_iter().rev() { smell_q.push_front(j); }
+                    if smelling.as_ref().map_or(false, |s| s.0.starts_with("HABLA?")) { smelling = None; }
+                }
             }
         }
         sh.chat.lock().unwrap().thinking = talk.thinking();
@@ -370,7 +417,6 @@ fn main() -> Result<()> {
                             if let Some((text, kind, cands, to)) = talk.scored(i, score, explore, &learned.talk, &learned.tvocab) {
                                 let t = sh.chat.lock().unwrap().push("edi", &text, &kind, Some(to), cands);
                                 talk.set_said_turn(t.id);
-                                let _ = writeln!(chatlog, "{}", serde_json::to_string(&t).unwrap());
                                 mood.stim(tk, face::Stim::Speak(text.clone()));
                                 say(&sh, now(), format!("DICE: {text}"));
                             }

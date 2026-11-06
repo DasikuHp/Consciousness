@@ -58,6 +58,49 @@ pub fn psi(kind: &str) -> f64 {
             .find_map(|t| t.strip_prefix("avg10=")).and_then(|x| x.parse().ok())))
         .unwrap_or(0.0)
 }
+
+/// Qué programa escucha en ese puerto (solo se ven los procesos propios sin ser root).
+pub fn port_owner(port: u16) -> Option<String> {
+    let mut inode = None;
+    for f in ["/proc/net/tcp", "/proc/net/tcp6"] {
+        let t = std::fs::read_to_string(f).ok()?;
+        for l in t.lines().skip(1) {
+            let c: Vec<&str> = l.split_whitespace().collect();
+            if c.len() > 9 && c[3] == "0A" && c[1].rsplit(':').next().and_then(|h| u16::from_str_radix(h, 16).ok()) == Some(port) { inode = Some(c[9].to_string()); break; }
+        }
+        if inode.is_some() { break; }
+    }
+    let want = format!("socket:[{}]", inode?);
+    for e in std::fs::read_dir("/proc").ok()?.flatten() {
+        let pid = e.file_name().to_string_lossy().into_owned();
+        if !pid.bytes().all(|b| b.is_ascii_digit()) { continue; }
+        let Ok(fds) = std::fs::read_dir(format!("/proc/{pid}/fd")) else { continue };
+        for fd in fds.flatten() {
+            if std::fs::read_link(fd.path()).map(|l| l.to_string_lossy() == want).unwrap_or(false) {
+                return std::fs::read_to_string(format!("/proc/{pid}/comm")).ok().map(|s| s.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+/// Diferencia de la hora local con UTC, en segundos (para «a las 18:30» y el diario).
+pub fn local_offset() -> i64 {
+    let o = Command::new("date").arg("+%z").output().ok().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_default();
+    if o.len() != 5 { return 0; }
+    let sign = if o.starts_with('-') { -1 } else { 1 };
+    let (h, m): (i64, i64) = (o[1..3].parse().unwrap_or(0), o[3..5].parse().unwrap_or(0));
+    sign * (h * 3600 + m * 60)
+}
+
+/// Aviso de escritorio (notify-send). EDI_NOTIFY=0 lo apaga.
+pub fn notify(title: &str, body: &str, icon: Option<&str>) {
+    if std::env::var("EDI_NOTIFY").as_deref() == Ok("0") { return; }
+    let mut c = Command::new("notify-send");
+    c.args(["-a", "EDI"]);
+    if let Some(i) = icon { c.args(["-i", i]); }
+    let _ = c.args([title, body]).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).spawn();
+}
 }
 
 #[cfg(windows)]
@@ -138,5 +181,40 @@ mod win {
             *last = Some((idle, total));
             ((busy * 100.0 - 50.0) * 2.0).clamp(0.0, 100.0)
         }
+    }
+
+    /// Qué programa escucha en ese puerto (netstat -ano → PID → tasklist).
+    pub fn port_owner(port: u16) -> Option<String> {
+        let pid = run("netstat", &["-ano", "-p", "tcp"]).lines().filter(|l| l.contains("LISTENING")).find_map(|l| {
+            let c: Vec<&str> = l.split_whitespace().collect();
+            (c.len() >= 5 && c[1].rsplit(':').next()?.parse::<u16>().ok()? == port).then(|| c[4].to_string())
+        })?;
+        let out = run("tasklist", &["/fi", &format!("PID eq {pid}"), "/fo", "csv", "/nh"]);
+        out.lines().next()?.split("\",\"").next().map(|n| n.trim_matches('"').trim_end_matches(".exe").to_string()).filter(|n| !n.is_empty() && !n.starts_with("INFO"))
+    }
+
+    #[repr(C)] struct SysTime([u16; 8]);
+    #[repr(C)] struct TzInfo { bias: i32, sn: [u16; 32], sd: SysTime, sb: i32, dn: [u16; 32], dd: SysTime, db: i32 }
+    #[link(name = "kernel32")]
+    extern "system" { fn GetTimeZoneInformation(tz: *mut TzInfo) -> u32; }
+
+    /// Diferencia de la hora local con UTC, en segundos.
+    pub fn local_offset() -> i64 {
+        unsafe {
+            let mut tz: TzInfo = std::mem::zeroed();
+            let r = GetTimeZoneInformation(&mut tz);
+            let bias = tz.bias + if r == 2 { tz.db } else if r == 1 { tz.sb } else { 0 };
+            -(bias as i64) * 60
+        }
+    }
+
+    /// Aviso de Windows (toast) con PowerShell 5.1, sin módulos; el texto va por variables de entorno.
+    pub fn notify(title: &str, body: &str, _icon: Option<&str>) {
+        if std::env::var("EDI_NOTIFY").as_deref() == Ok("0") { return; }
+        let ps = "[Windows.UI.Notifications.ToastNotificationManager,Windows.UI.Notifications,ContentType=WindowsRuntime]>$null;\
+$x=[Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02);\
+$t=$x.GetElementsByTagName('text');$t[0].AppendChild($x.CreateTextNode($env:EDI_T))>$null;$t[1].AppendChild($x.CreateTextNode($env:EDI_B))>$null;\
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe').Show([Windows.UI.Notifications.ToastNotification]::new($x))";
+        let _ = Command::new("powershell").args(["-NoProfile", "-NonInteractive", "-Command", ps]).env("EDI_T", title).env("EDI_B", body).creation_flags(NO_WINDOW).spawn();
     }
 }

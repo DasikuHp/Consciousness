@@ -21,6 +21,10 @@ pub enum Stim {
     Proc(String),
     Focus(String),
     BrainBurst(&'static str),
+    /// un comando de tu terminal (hook): nombre y si salió bien
+    Cmd(String, bool),
+    /// un recordatorio vence
+    Remind(String),
 }
 
 pub struct Mood {
@@ -51,7 +55,7 @@ impl Mood {
     /// Estímulo puntual (tiene prioridad unos segundos).
     pub fn stim(&mut self, t: u64, s: Stim) {
         // la reacción a lo que le dices no la tapa el eco de su propio cerebro
-        if matches!(s, Stim::BrainBurst(_) | Stim::Proc(_)) && t.saturating_sub(self.last_user) < 60 { return; }
+        if matches!(s, Stim::BrainBurst(_) | Stim::Proc(_) | Stim::Cmd(..)) && t.saturating_sub(self.last_user) < 60 { return; }
         self.last_stim = t;
         self.rot += 1;
         let r = self.rot;
@@ -78,6 +82,15 @@ impl Mood {
             Stim::Proc(p) => self.set(t, 29, format!("{p}…\ninteresante.")),
             Stim::Focus(a) => { self.last_user = t; self.set(t, 23, format!("¿{a}?\nA ver qué haces.")) }
             Stim::BrainBurst(reg) => self.set(t, 6, format!("Algo se ha encendido\nen mi {reg}.")),
+            Stim::Cmd(c, true) => {
+                let lines = [format!("{c}.\nApuntado."), format!("¿{c} otra vez?\nVale."), format!("{c}…\nya veo por dónde vas.")];
+                self.set(t, [23, 29, 5][r % 3], lines[r % 3].clone())
+            }
+            Stim::Cmd(c, false) => {
+                let lines = [format!("{c} ha fallado.\nNo me mires a mí."), format!("{c}: error.\nSorpresa ninguna.")];
+                self.set(t, [9, 1][r % 2], lines[r % 2].clone())
+            }
+            Stim::Remind(x) => { self.last_user = t; self.set(t, 25, format!("⏰ {x}")) }
         }
     }
 

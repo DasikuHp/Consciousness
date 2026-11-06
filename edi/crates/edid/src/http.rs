@@ -25,6 +25,14 @@ pub struct Shared {
     pub learn: Mutex<serde_json::Value>,
     /// (longitud, vocabulario, historia reciente de conceptos (ROSA), valencias medidas)
     pub seq: Mutex<(usize, Vec<String>, Vec<u32>, Vec<(String, f32)>)>,
+    /// eventos de sentidos externos (/sense: comandos de la terminal, notas…): (etiqueta, valencia)
+    pub sensed: Mutex<Vec<(String, f32)>>,
+    /// texto que oye sin contestar (las notas): entra al oído y a la memoria
+    pub inbox_quiet: Mutex<Vec<String>>,
+    pub reminders: Mutex<Vec<crate::uso::Reminder>>,
+    pub state_dir: std::path::PathBuf,
+    /// hora local − UTC (s)
+    pub tz_offset: i64,
 }
 
 const DASH: &str = include_str!("dashboard.html");
@@ -52,7 +60,7 @@ fn respond(s: &mut TcpStream, ctype: &str, body: &[u8]) {
     let _ = s.write_all(body);
 }
 
-fn recall_json(sh: &Shared, word: &str) -> String {
+pub fn recall_json(sh: &Shared, word: &str) -> String {
     let mut m = sh.samn.lock().unwrap();
     let seed = m.find(Kind::Word, word).or_else(|| m.find(Kind::Event, word));
     let out = match seed { Some(i) => m.recall(&[(i, 1.0)], None), None => vec![] };
@@ -151,7 +159,16 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
         ("POST", "/say") => {
             // tu frase se registra como turno; EDI la oye en el siguiente tick (50 ms)
             let text: String = body.trim().chars().take(500).collect();
+            let txt = q("fmt").as_deref() == Some("text");
             if text.is_empty() { return respond(&mut s, "application/json", b"{\"error\":\"vacio\"}"); }
+            if text.starts_with('/') {
+                // orden: la contesta el sistema (no el cerebro), al momento
+                let id = sh.chat.lock().unwrap().push("tú", &text, "orden", None, vec![]).id;
+                let (kind, reply) = crate::uso::command(&sh, &text);
+                let r = sh.chat.lock().unwrap().push("sistema", &reply, &kind, Some(id), vec![]);
+                if txt { return respond(&mut s, "text/plain; charset=utf-8", format!("{reply}\n").as_bytes()); }
+                return respond(&mut s, "application/json", serde_json::json!({"turn": id, "sistema": reply, "kind": kind, "sistema_turn": r.id}).to_string().as_bytes());
+            }
             let last = text.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).last().unwrap_or("").to_lowercase();
             let id = sh.chat.lock().unwrap().push("tú", &text, "frase", None, vec![]).id;
             sh.inbox.lock().unwrap().push((id, text));
@@ -160,17 +177,46 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
             }
             // por defecto espera su respuesta (huele cada candidata ~0,4 s de tiempo biológico)
             let t0 = std::time::Instant::now();
-            let mut reply = None;
+            let (mut reply, mut fb) = (None, false);
             while t0.elapsed().as_secs_f32() < 10.0 {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 let c = sh.chat.lock().unwrap();
-                if c.turns.iter().any(|t| t.id == id && t.kind == "feedback") { break; }
+                if c.turns.iter().any(|t| t.id == id && t.kind == "feedback") { fb = true; break; }
                 if let Some(t) = c.turns.iter().rev().find(|t| t.reply_to == Some(id) && t.who == "edi") { reply = Some(t.clone()); break; }
+            }
+            if txt {
+                let out = match (&reply, fb) {
+                    (Some(r), _) => format!("EDI › {}   [{}]\n", r.text, r.kind),
+                    (None, true) => "EDI › (lo toma como tu aprobación de su última respuesta)\n".into(),
+                    (None, false) => "EDI › … (sigue pensando; mira /chat)\n".into(),
+                };
+                return respond(&mut s, "text/plain; charset=utf-8", out.as_bytes());
             }
             let mut v: serde_json::Value = serde_json::from_str(&recall_json(&sh, &last)).unwrap();
             v["turn"] = serde_json::json!(id);
             if let Some(r) = reply { v["edi"] = serde_json::json!(r.text); v["edi_turn"] = serde_json::json!(r.id); v["kind"] = serde_json::json!(r.kind); v["cands"] = serde_json::json!(r.cands); }
             respond(&mut s, "application/json", v.to_string().as_bytes())
+        }
+        ("POST", "/sense") => {
+            // sentidos externos: «CMD:git» (hook de la terminal), «APP:…», «EV:…». ?ok=0 = el comando falló.
+            // Solo etiquetas cortas: nunca argumentos ni contenido.
+            let ok = q("ok").as_deref() != Some("0");
+            let mut n = 0;
+            for l in body.lines().map(str::trim).filter(|l| !l.is_empty()).take(16) {
+                let Some((k, v)) = l.split_once(':') else { continue };
+                let k = k.trim().to_uppercase();
+                let v: String = v.trim().chars().filter(|c| !c.is_control()).take(48).collect();
+                if v.is_empty() || !["CMD", "APP", "EV"].contains(&k.as_str()) { continue; }
+                let (label, val) = if k == "CMD" && !ok { (format!("FALLO:{v}"), -0.3) } else { (format!("{k}:{v}"), 0.05) };
+                sh.sensed.lock().unwrap().push((label, val));
+                n += 1;
+            }
+            respond(&mut s, "application/json", serde_json::json!({"ok": n > 0, "n": n}).to_string().as_bytes())
+        }
+        ("GET", "/diario") => {
+            let h: u64 = q("h").and_then(|v| v.parse().ok()).unwrap_or(24);
+            let t = crate::uso::diary(&sh, &sh.state_dir, h.clamp(1, 720), crate::now());
+            respond(&mut s, "text/plain; charset=utf-8", t.as_bytes())
         }
         ("GET", "/chat") => {
             let since: u64 = q("since").and_then(|v| v.parse().ok()).unwrap_or(0);
@@ -190,7 +236,15 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
         }
         ("POST", "/teach") => {
             // ✏️ enseñar: «a eso se responde: TEXTO» (turn=ID o la última respuesta)
+            // varias líneas «pregunta => respuesta»: un manual de frases de una vez
             let turn = q("turn").and_then(|v| v.parse().ok());
+            let pairs: Vec<_> = body.lines().filter_map(crate::talk::split_pair).take(500).collect();
+            if pairs.len() > 1 || (pairs.len() == 1 && body.trim().lines().count() > 1) {
+                let n = pairs.len();
+                let mut f = sh.fb.lock().unwrap();
+                for (q, a) in pairs { f.push(crate::talk::Feedback::Pair { q: q.chars().take(300).collect(), a: a.chars().take(300).collect() }); }
+                return respond(&mut s, "application/json", serde_json::json!({"ok": true, "pares": n}).to_string().as_bytes());
+            }
             let text: String = body.trim().chars().take(300).collect();
             if text.is_empty() { return respond(&mut s, "application/json", b"{\"error\":\"vacio\"}"); }
             sh.fb.lock().unwrap().push(crate::talk::Feedback::Teach { turn, text });

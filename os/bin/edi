@@ -1,29 +1,96 @@
 #!/bin/bash
 # edi — control de EDI desde la terminal, Niri o Waybar.
 set -euo pipefail
+U="127.0.0.1:${EDI_PORT:-7077}"
+post() { curl -s --max-time "${2:-15}" -X POST --data-binary "$1" "$U/say?fmt=text"; }
+orden() { local o="$1"; shift; post "/$o${*:+ $*}"; }
 case "${1:-status}" in
   status)
-    curl -s --max-time 1 127.0.0.1:7077/state | jq -r '"\(.name) · edad \(.age_bio_s|floor)s · energía \((.energy*100)|floor)% · sueño \((.sleep_pressure*100)|floor)% · \(if .asleep then "durmiendo" else "despierta" end) · spikes \(.spikes_last_tick)"' 2>/dev/null \
+    curl -s --max-time 1 "$U/state" | jq -r '"\(.name) · edad \(.age_bio_s|floor)s · energía \((.energy*100)|floor)% · sueño \((.sleep_pressure*100)|floor)% · \(if .asleep then "durmiendo" else "despierta" end) · spikes \(.spikes_last_tick)"' 2>/dev/null \
       || echo "EDI no responde (systemctl --user status edid)"
     ;;
   waybar)
-    s=$(curl -s --max-time 1 127.0.0.1:7077/state || true)
+    s=$(curl -s --max-time 1 "$U/state" || true)
     if [ -z "$s" ]; then echo '{"text":"EDI ·","class":"off"}'; exit 0; fi
-    echo "$s" | jq -c '{text: (if .asleep then "EDI 󰒲" else "EDI 󰋑" end), tooltip: "energía \((.energy*100)|floor)% · spikes \(.spikes_last_tick)", class: (if .asleep then "asleep" else "awake" end)}'
+    echo "$s" | jq -c '{text: (if .asleep then "EDI 󰒲" else "EDI 󰋑" end), tooltip: "\(.face.line // "")\nenergía \((.energy*100)|floor)% · spikes \(.spikes_last_tick)", class: (if .asleep then "asleep" else "awake" end)}'
     ;;
   toggle)
     if systemctl --user is-active -q edid; then systemctl --user stop edid; else systemctl --user start edid; fi
     ;;
-  say)   shift; curl -s --max-time 15 -X POST --data "$*" 127.0.0.1:7077/say | jq -r '(if .edi then "EDI: \(.edi)   [\(.kind)]" else "EDI: (lo toma como tu aprobación)" end), (if .known then "  recuerda «\(.query)»: " + ([.recalled[:5][].label] | join(" · ")) else empty end)' ;;
-  +|-)   curl -s -X POST --data "$1" 127.0.0.1:7077/reward >/dev/null && echo "${1/+/👍}${1/-/👎} a su última respuesta → dopamina" | tr -d '+-' ;;
-  teach) shift; curl -s -X POST --data "$*" 127.0.0.1:7077/teach >/dev/null && echo "✏️ a eso se responde: «$*»" ;;
-  chat)  curl -s 127.0.0.1:7077/chat | jq -r --argjson n "${2:-12}" '.turns[-$n:][] | (if .who == "edi" then "  EDI › \(.text)   [\(.kind)\(if .reward > 0 then " 👍" elif .reward < 0 then " 👎" else "" end)]" else "   tú › \(.text)" + (if .kind != "frase" then "   [\(.kind)]" else "" end) end)' ;;
-  learn) curl -s 127.0.0.1:7077/learn | jq . ;;
-  reward) curl -s -X POST --data "${2:-+}" 127.0.0.1:7077/reward >/dev/null && echo "refuerzo ${2:-+} → dopamina" ;;
-  sleep) curl -s -X POST 127.0.0.1:7077/sleep >/dev/null && echo "EDI se va a dormir" ;;
+  say)   shift; post "$*" ;;
+  hablar|talk|-i)
+    # conversación en la terminal: Enter vacío o Ctrl-D para salir
+    echo "Habla con EDI (/ayuda: órdenes · + / - premian o castigan · = texto le enseña · Enter vacío: salir)"
+    while IFS= read -r -e -p "tú › " l; do
+      [ -z "$l" ] && break
+      history -s "$l"
+      case "$l" in
+        +|-) curl -s -X POST --data "$l" "$U/reward" >/dev/null && echo "   ${l/+/👍}" | sed 's/-/👎/' ;;
+        =*)  curl -s -X POST --data-binary "${l#=}" "$U/teach" >/dev/null && echo "   ✏️ ${l#=}" ;;
+        *)   post "$l" ;;
+      esac
+    done ;;
+  +|-)   curl -s -X POST --data "$1" "$U/reward" >/dev/null && echo "${1/+/👍}${1/-/👎} a su última respuesta → dopamina" | tr -d '+-' ;;
+  teach) shift; curl -s -X POST --data-binary "$*" "$U/teach" >/dev/null && echo "✏️ $*" ;;
+  teach-file|ensena-archivo)
+    # un manual de frases: una línea «pregunta => respuesta» por par
+    f="${2:?uso: edi teach-file ARCHIVO (líneas «pregunta => respuesta»)}"
+    curl -s -X POST --data-binary @"$f" "$U/teach" | jq -r '"✏️ \(.pares // 1) pares enseñados"' ;;
+  diario|nota|notas|recuerdame|recordatorios|borra|recuerda|aprendido|duerme) o="$1"; shift; orden "$o" "$@" ;;
+  ensena|enseña) shift; orden "enseña" "$@" ;;
+  /*)    post "$*" ;;
+  chat)  curl -s "$U/chat" | jq -r --argjson n "${2:-12}" '.turns[-$n:][] | (if .who == "edi" then "  EDI › \(.text)   [\(.kind)\(if .reward > 0 then " 👍" elif .reward < 0 then " 👎" else "" end)]" elif .who == "sistema" then "  ··· \(.text | gsub("\n"; "\n      "))" else "   tú › \(.text)" + (if .kind != "frase" then "   [\(.kind)]" else "" end) end)' ;;
+  hook)
+    # sentido nuevo: EDI oye qué comandos usas. Solo el NOMBRE (git, cargo…), nunca los argumentos.
+    # Añade a ~/.bashrc:  eval "$(edi hook bash)"   ·   a ~/.zshrc:  eval "$(edi hook zsh)"
+    case "${2:-bash}" in
+      bash) cat <<'EOF'
+__edi_hook() {
+  local s=$? n c d
+  read -r n c d _ <<<"$(HISTTIMEFORMAT= history 1)"
+  [[ -z $c || $n == "${__edi_n:-}" ]] && return $s
+  __edi_n=$n
+  [[ $c == sudo || $c == time || $c == nohup ]] && c=$d
+  [[ -n $c ]] && (curl -s -m 1 -X POST --data "CMD:${c##*/}" "http://127.0.0.1:${EDI_PORT:-7077}/sense?ok=$((s==0))" >/dev/null 2>&1 &)
+  return $s
+}
+[[ $PROMPT_COMMAND == *__edi_hook* ]] || PROMPT_COMMAND="__edi_hook${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+EOF
+      ;;
+      zsh) cat <<'EOF'
+__edi_pre() { local w=(${(z)1}); __edi_c=${w[1]}; [[ $__edi_c == (sudo|time|nohup) ]] && __edi_c=${w[2]}; }
+__edi_post() {
+  local s=$?
+  [[ -n $__edi_c ]] || return
+  { curl -s -m 1 -X POST --data "CMD:${__edi_c:t}" "http://127.0.0.1:${EDI_PORT:-7077}/sense?ok=$((s==0))" >/dev/null 2>&1 } &!
+  __edi_c=
+}
+autoload -Uz add-zsh-hook; add-zsh-hook preexec __edi_pre; add-zsh-hook precmd __edi_post
+EOF
+      ;;
+      *) echo "uso: edi hook bash|zsh" >&2; exit 1 ;;
+    esac ;;
+  learn) curl -s "$U/learn" | jq . ;;
+  reward) curl -s -X POST --data "${2:-+}" "$U/reward" >/dev/null && echo "refuerzo ${2:-+} → dopamina" ;;
+  sleep) curl -s -X POST "$U/sleep" >/dev/null && echo "EDI se va a dormir" ;;
   brain) exec edi-shell ;;
-  face)  curl -s --max-time 1 127.0.0.1:7077/face | jq -r '"[\(.name)] \(.line)"' ;;
+  face)  curl -s --max-time 1 "$U/face" | jq -r '"[\(.name)] \(.line)"' ;;
   widget) exec edi-shell --widget ;;
   log)   tail -n "${2:-20}" "$HOME/.local/state/edi/events.jsonl" ;;
-  *)     echo "uso: edi [status|say TEXTO|+|-|teach TEXTO|chat N|reward +|-|learn|face|sleep|brain|widget|waybar|toggle|log N]"; exit 1 ;;
+  *)     cat <<'EOF'
+uso: edi [orden]
+  hablar                 conversación en la terminal
+  say TEXTO              dile algo (y su respuesta)
+  + | -                  premia o castiga su última respuesta (dopamina)
+  teach TEXTO            enséñale qué debía responder (o «pregunta => respuesta»)
+  teach-file ARCHIVO     manual de frases: una línea «pregunta => respuesta» por par
+  diario [horas]         lo que percibió: apps, comandos, puertos, conversación
+  nota TEXTO · notas [palabra]
+  recuerdame 10m|2h|18:30 TEXTO · recordatorios · borra N
+  recuerda PALABRA       qué asocia a esa palabra
+  aprendido · chat N · status · face · learn · log N
+  hook bash|zsh          que oiga qué comandos usas (eval "$(edi hook bash)" en ~/.bashrc)
+  sleep · brain · widget · waybar · toggle
+EOF
+     exit 1 ;;
 esac

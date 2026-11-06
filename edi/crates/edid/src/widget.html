@@ -26,7 +26,7 @@ body.solid{background:#0b1220}
 <div id="talk"><div data-edi="log"></div><div data-edi="input"></div></div>
 <script src="/chat.js"></script>
 <script>
-const chat=EDI.mount(document.body,{max:30,placeholder:'Háblale… (Enter · + − · = enseñar)'});
+const chat=EDI.mount(document.body,{max:30,placeholder:'Háblale… (Enter · / órdenes)',alertEl:document.getElementById('card')});
 if(new URLSearchParams(location.search).has('solid'))document.body.classList.add('solid');
 const $=i=>document.getElementById(i),cv=$('g'),gl=cv.getContext('webgl2',{alpha:true,premultipliedAlpha:false,antialias:false});const HDR=!!(gl&&gl.getExtension('EXT_color_buffer_float'));
 const RC=[[.42,.5,.66],[.32,.52,1],[.78,.36,1],[1,.58,.18],[.25,.95,.55],[.2,.85,.95],[1,.9,.3],[1,.35,.55]];
